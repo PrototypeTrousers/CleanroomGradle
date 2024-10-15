@@ -7,9 +7,14 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.CopySpec;
+import org.gradle.api.file.Directory;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.TaskProvider;
+import org.gradle.api.tasks.bundling.Jar;
+import org.gradle.api.tasks.bundling.Zip;
+
+import java.nio.file.Files;
 
 public final class Tasks {
 
@@ -78,6 +83,20 @@ public final class Tasks {
 
     public static <T extends Task> void configure(Project project, String taskName, Action<? super T> action) {
         project.getTasks().named(taskName).configure((Action<? super Task>) action);
+    }
+
+    public static TaskProvider<Zip> zip(Project project, String name, Object from, Object to) {
+        return withZip(project, name, zip -> {
+            zip.from(from);
+            zip.setProperty("destinationDirectory", to);
+            zip.setProperty("archiveBaseName", "zippedmodifiedmcsources");
+            zip.setProperty("archiveAppendix", "");
+            zip.setProperty("archiveVersion", "");
+        });
+    }
+
+    public static TaskProvider<Zip> withZip(Project project, String name, Action<Zip> action) {
+        return with(project, name, Zip.class, action);
     }
 
     private Tasks() { }

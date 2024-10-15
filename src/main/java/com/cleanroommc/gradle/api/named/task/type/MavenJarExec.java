@@ -9,7 +9,7 @@ public abstract class MavenJarExec extends LazilyConstructedJavaExec {
     public MavenJarExec(String name, String artifactNotation) {
         var project = getProject();
         var configuration = Configurations.of(project, name, true);
-        provideMavenArtifacts(artifactNotation, configuration);
+        provideMavenArtifacts(artifactNotation, configuration.get());
         setWorkingDir(Locations.temp(project, getName()));
     }
     

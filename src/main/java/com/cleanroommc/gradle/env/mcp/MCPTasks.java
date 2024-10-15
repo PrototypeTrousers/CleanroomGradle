@@ -30,9 +30,7 @@ import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.api.tasks.compile.JavaCompile;
 
-import javax.inject.Inject;
 import java.io.File;
-import java.util.List;
 
 /**
  * Fixme: 1.12.2 only. Don't care about other versions for now.
@@ -133,8 +131,8 @@ public class MCPTasks {
     }
 
     private void initConfigs() {
-        this.mcpConfig = Configurations.of(this.project, "mcp_" + this.version.replace('.', '_'));
-        this.mcpMappingConfig = Configurations.of(this.project, "mcpMapping_" + this.version.replace('.', '_'));
+        this.mcpConfig = Configurations.of(this.project, "mcp_" + this.version.replace('.', '_')).get();
+        this.mcpMappingConfig = Configurations.of(this.project, "mcpMapping_" + this.version.replace('.', '_')).get();
 
         this.project.afterEvaluate($ -> {
             Dependencies.add(this.project, this.mcpConfig, "de.oceanlabs.mcp:mcp_config:1.12.2-20201025.185735");

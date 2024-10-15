@@ -51,6 +51,7 @@ public class VanillaTasks {
                     dl.onlyIfModified(true);
                     dl.onlyIfNewer(true);
                     dl.useETag(true);
+                    dl.dest(manifestLocation);
                 });
                 result.join();
             } catch (IOException e) {
@@ -105,6 +106,7 @@ public class VanillaTasks {
                         dl.overwrite(false);
                         dl.onlyIfModified(true);
                         dl.onlyIfNewer(true);
+                        dl.dest(file);
                     });
                     result.join();
                 }
@@ -126,6 +128,7 @@ public class VanillaTasks {
                                 dl.overwrite(false);
                                 dl.onlyIfModified(true);
                                 dl.onlyIfNewer(true);
+                                dl.dest(file);
                             });
                     result.join();
                 }
@@ -186,8 +189,8 @@ public class VanillaTasks {
     }
 
     private void initConfigs() {
-        this.vanillaConfig = Configurations.of(this.project, "vanilla_" + this.version.replace('.', '_'), true);
-        this.vanillaNativesConfig = Configurations.of(this.project, "vanillaNatives_" + this.version.replace('.', '_'), false);
+        this.vanillaConfig = Configurations.of(this.project, "vanilla_" + this.version.replace('.', '_'), true).get();
+        this.vanillaNativesConfig = Configurations.of(this.project, "vanillaNatives_" + this.version.replace('.', '_'), false).get();
 
         this.project.afterEvaluate(project -> {
             for (var library : versionMeta().get().libraries()) {
