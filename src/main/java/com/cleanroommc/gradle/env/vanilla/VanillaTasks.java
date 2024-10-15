@@ -84,6 +84,10 @@ public class VanillaTasks {
         this.initTasks();
     }
 
+    public TaskGroup getGroup(){
+        return this.group;
+    }
+
     public String minecraftVersion() {
         return version;
     }
@@ -281,7 +285,7 @@ public class VanillaTasks {
         }));
     }
 
-    private String taskName(String taskName) {
+    public String taskName(String taskName) {
         return this.version.replace('.', '_') + "_" + taskName;
     }
 
