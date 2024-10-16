@@ -13,10 +13,7 @@ import com.cleanroommc.gradle.api.structure.IO;
 import com.cleanroommc.gradle.api.structure.Locations;
 import com.cleanroommc.gradle.env.common.task.Decompile;
 import com.cleanroommc.gradle.env.common.task.RunMinecraft;
-import com.cleanroommc.gradle.env.mcp.task.Deobfuscate;
-import com.cleanroommc.gradle.env.mcp.task.MergeJars;
-import com.cleanroommc.gradle.env.mcp.task.PolishDeobfuscation;
-import com.cleanroommc.gradle.env.mcp.task.Remap;
+import com.cleanroommc.gradle.env.mcp.task.*;
 import com.cleanroommc.gradle.env.vanilla.VanillaTasks;
 import net.minecraftforge.fml.relauncher.Side;
 import org.gradle.api.DefaultTask;
@@ -42,6 +39,7 @@ public class MCPTasks {
     public static final String EXTRACT_SERVER_RESOURCES = "extractServerResources";
     public static final String MERGE_JARS = "mergeJars";
     public static final String DEOBFUSCATE = "deobfuscate";
+    public static final String OBFUSCATE = "obfuscate";
     public static final String POLISH_DEOBFUSCATED_JAR = "polishDeobfuscatedJar";
     public static final String DECOMPILE = "decompile";
     public static final String EXTRACT_SRG_PATCHES = "extractSrgPatches";
@@ -73,6 +71,7 @@ public class MCPTasks {
     private TaskProvider<ApplyDiffs> patchJar;
     private TaskProvider<Remap> remapJar;
     private TaskProvider<RunMinecraft> runSrgClient, runSrgServer, runMcpClient, runMcpServer;
+    private TaskProvider<Obfuscate> obfuscate;
 
     public MCPTasks(Project project, VanillaTasks vanillaTasks) {
         this.project = project;
@@ -110,6 +109,14 @@ public class MCPTasks {
 
     public TaskProvider<MergeJars> mergeJars() {
         return mergeJars;
+    }
+
+    public TaskProvider<PolishDeobfuscation> polishDeobfuscatedJar() {
+        return polishDeobfuscatedJar;
+    }
+
+    public TaskProvider<Obfuscate> obfuscate() {
+        return obfuscate;
     }
 
     public Provider<File> srgMapping() {
@@ -175,6 +182,12 @@ public class MCPTasks {
             t.getObfuscatedJar().set(this.mergeJars.flatMap(MergeJars::getMergedJar));
             t.getSrgMappingFile().fileProvider(this.srgMapping());
             t.getDeobfuscatedJar().set(this.location("deobfuscated.jar"));
+        }));
+
+        this.obfuscate = group.add(Tasks.with(project, this.taskName(OBFUSCATE), Obfuscate.class, t -> {
+            t.getDeobfuscatedJar().set(this.mergeJars.flatMap(MergeJars::getMergedJar));
+            t.getSrgMappingFile().fileProvider(this.srgMapping());
+            t.getObfuscatedJar().set(this.location("obfuscated.jar"));
         }));
 
         this.polishDeobfuscatedJar = group.add(Tasks.with(project, this.taskName(POLISH_DEOBFUSCATED_JAR), PolishDeobfuscation.class, t -> {

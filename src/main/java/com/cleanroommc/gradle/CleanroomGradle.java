@@ -30,7 +30,7 @@ public class CleanroomGradle implements Plugin<Project> {
         // var mcpTasks = objectFactory.newInstance(MCPTasks.class, project, vanillaTasks);
 
         //var forgeTasks = new ForgeTasks(project, vanillaTasks, mcpTasks, "1.12.2");
-        var cleanroomTasks = new CleanroomTasks(project, vanillaTasks, "1.12.2");
+        var cleanroomTasks = new CleanroomTasks(project, vanillaTasks, mcpTasks, "1.12.2");
         var extension = project.getExtensions().create("relauncher", RelauncherExtension.class);
     }
 

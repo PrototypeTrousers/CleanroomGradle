@@ -14,6 +14,10 @@ import com.cleanroommc.gradle.api.types.Types;
 import com.cleanroommc.gradle.api.types.json.schema.VersionManifest;
 import com.cleanroommc.gradle.api.types.json.schema.VersionMeta;
 import com.cleanroommc.gradle.env.common.task.RunMinecraft;
+import com.cleanroommc.gradle.env.mcp.MCPTasks;
+import com.cleanroommc.gradle.env.mcp.task.MergeJars;
+import com.cleanroommc.gradle.env.mcp.task.Obfuscate;
+import com.cleanroommc.gradle.env.mcp.task.PolishDeobfuscation;
 import com.cleanroommc.gradle.env.vanilla.VanillaTasks;
 import net.minecraftforge.fml.relauncher.Side;
 import org.gradle.api.Project;
@@ -45,14 +49,16 @@ public class CleanroomTasks {
     private final TaskGroup group;
     private final File cache;
     private final VanillaTasks vanillaTasks;
+    private final MCPTasks mcpTasks;
     private TaskProvider<RunMinecraft> runClient;
 
     private Configuration cleanroomConfig, cleanroomNativesConfig;
 
     @Inject
-    public CleanroomTasks(Project project, VanillaTasks vanillaTasks, String minecraftVersion) {
+    public CleanroomTasks(Project project, VanillaTasks vanillaTasks, MCPTasks mcpTasks, String minecraftVersion) {
         this.project = project;
         this.vanillaTasks = vanillaTasks;
+        this.mcpTasks = mcpTasks;
         this.version = minecraftVersion;
         this.group = TaskGroup.of("cleanroom " + minecraftVersion);
         this.cache = Locations.build(project, "versions", minecraftVersion, "cleanroom");
@@ -168,7 +174,7 @@ public class CleanroomTasks {
 
         var extractNatives = group.add(Tasks.unzip(project, EXTRACT_CLEANROOM_NATIVES, cleanroomNativesConfig, location("natives"), t -> {
             t.exclude("META-INF/**");
-            t.setDuplicatesStrategy(DuplicatesStrategy.EXCLUDE);
+            t.setDuplicatesStrategy(DuplicatesStrategy.INCLUDE);
         }));
 
 
@@ -180,10 +186,13 @@ public class CleanroomTasks {
             t.getAssetIndexVersion().set(vanillaTasks.assetIndexId());
             t.getVanillaAssetsLocation().set(Locations.build(project, "assets"));
             t.setWorkingDir(Locations.run(project, version, Environment.CLEANROOM, Side.CLIENT));
-            t.classpath(cleanroomConfig, vanillaTasks.clientJar());
+            t.classpath(mcpTasks.mergeJars().map(MergeJars::getMergedJar));
+            t.classpath(cleanroomConfig);
             t.classpath(cleanroomNativesConfig);
-            t.getMainClass().set("top.outlands.foundation.boot.Foundation");
-            t.args("--tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker");
+            t.getMainClass().set("com.cleanroommc.boot.MainClient");
+            //t.args("--tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker");
+            t.environment("tweakClass", "net.minecraftforge.fml.common.launcher.FMLTweaker");
+            t.environment("mainClass", "top.outlands.foundation.boot.Foundation");
         }));
     }
 
