@@ -51,6 +51,7 @@ public class MCPTasks {
     public static final String RUN_SRG_SERVER = "runSrgServer";
     public static final String RUN_MCP_CLIENT = "runMcpClient";
     public static final String RUN_MCP_SERVER = "runMcpServer";
+    private static final String PATCH_JAR2 = "patchJarwithForgePatches";
 
     private final Project project;
     private final String version;
@@ -72,6 +73,8 @@ public class MCPTasks {
     private TaskProvider<Remap> remapJar;
     private TaskProvider<RunMinecraft> runSrgClient, runSrgServer, runMcpClient, runMcpServer;
     private TaskProvider<Obfuscate> obfuscate;
+    private TaskProvider<GenSrgMappingsTask> genSrgMappings;
+    private TaskProvider<ApplyDiffs> patchJar2;
 
     public MCPTasks(Project project, VanillaTasks vanillaTasks) {
         this.project = project;
@@ -157,6 +160,18 @@ public class MCPTasks {
         });
     }
 
+    public TaskProvider<Copy> extractClientResources() {
+        return extractClientResources;
+    }
+
+    public TaskProvider<Copy> extractServerResources() {
+        return extractServerResources;
+    }
+
+    public TaskProvider<ApplyDiffs> patchJar() {
+        return patchJar;
+    }
+
     private void initTasks() {
         var project = this.project;
         var group = this.group;
@@ -219,9 +234,31 @@ public class MCPTasks {
             t.modified(this.location("patched.jar"));
         }));
 
+        this.patchJar2 = group.add(Tasks.with(project, this.taskName(PATCH_JAR2), ApplyDiffs.class, t -> {
+            t.dependsOn(patchJar);
+            t.source(this.location("patched.jar"));
+            t.patch(this.location("patches", "patches/minecraft"));
+            t.modified(this.location("patched2.jar"));
+        }));
+
         var mcpMappingFolder = this.location("mappings", "mcp", "stable", "39");
 
         this.extractMcpMappings = group.add(Tasks.unzip(project, this.taskName(EXTRACT_MCP_MAPPINGS), this.mcpMappingConfig, mcpMappingFolder));
+
+        this.genSrgMappings = group.add(Tasks.with(this.project, "genSrg", GenSrgMappingsTask.class, t -> {
+            t.dependsOn(this.extractMcpMappings);
+            t.getInputSrg().set(srgMapping().get());
+            t.getFieldsCsv().set(Locations.file(mcpMappingFolder, "fields.csv"));
+            t.getMethodsCsv().set(Locations.file(mcpMappingFolder, "methods.csv"));
+            t.getInputExc().set(Locations.file(mcpMappingFolder, "forge.exc"));
+            t.getNotchToSrg().set(Locations.file(mcpMappingFolder, "notch-srg.srg"));
+            t.getNotchToMcp().set(Locations.file(mcpMappingFolder, "notch-mcp.srg"));
+            t.getSrgToMcp().set(Locations.file(mcpMappingFolder, "srg-mcp.srg"));
+            t.getMcpToSrg().set(Locations.file(mcpMappingFolder, "mcp-srg.srg"));
+            t.getMcpToNotch().set(Locations.file(mcpMappingFolder, "mcp-notch.srg"));
+            t.getSrgExc().set(Locations.file(mcpMappingFolder, "srg.exc"));
+            t.getMcpExc().set(Locations.file(mcpMappingFolder, "mcp.exc"));
+        }));
 
         this.remapJar = group.add(Tasks.with(project, this.taskName(REMAP_JAR), Remap.class, t -> {
             t.dependsOn(this.extractMcpMappings);
@@ -316,4 +353,15 @@ public class MCPTasks {
         return Locations.file(this.cache, paths);
     }
 
+    public TaskProvider<GenSrgMappingsTask> genSrgMappings() {
+        return genSrgMappings;
+    }
+
+    public TaskProvider<Deobfuscate> deobfuscate() {
+        return deobfuscate;
+    }
+
+    public TaskProvider<Decompile> decompile() {
+        return decompile;
+    }
 }

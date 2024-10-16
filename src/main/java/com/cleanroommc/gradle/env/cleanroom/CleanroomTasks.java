@@ -8,6 +8,8 @@ import com.cleanroommc.gradle.api.named.dependency.Dependencies;
 import com.cleanroommc.gradle.api.named.task.TaskGroup;
 import com.cleanroommc.gradle.api.named.task.Tasks;
 import com.cleanroommc.gradle.api.os.Platform;
+import com.cleanroommc.gradle.api.patch.ApplyDiffs;
+import com.cleanroommc.gradle.api.patch.bin.ApplyBinPatches;
 import com.cleanroommc.gradle.api.structure.IO;
 import com.cleanroommc.gradle.api.structure.Locations;
 import com.cleanroommc.gradle.api.types.Types;
@@ -15,9 +17,7 @@ import com.cleanroommc.gradle.api.types.json.schema.VersionManifest;
 import com.cleanroommc.gradle.api.types.json.schema.VersionMeta;
 import com.cleanroommc.gradle.env.common.task.RunMinecraft;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
-import com.cleanroommc.gradle.env.mcp.task.MergeJars;
-import com.cleanroommc.gradle.env.mcp.task.Obfuscate;
-import com.cleanroommc.gradle.env.mcp.task.PolishDeobfuscation;
+import com.cleanroommc.gradle.env.mcp.task.*;
 import com.cleanroommc.gradle.env.vanilla.VanillaTasks;
 import net.minecraftforge.fml.relauncher.Side;
 import org.gradle.api.Project;
@@ -177,6 +177,12 @@ public class CleanroomTasks {
             t.setDuplicatesStrategy(DuplicatesStrategy.INCLUDE);
         }));
 
+        var binPatchJar = group.add(Tasks.with(this.project, "binPatchJar", ApplyBinPatches.class, t -> {
+            t.getCleanJar().set(mcpTasks.deobfuscate().get().getDeobfuscatedJar());
+            t.getPatchLMZA().set(location("binpatches.pack.lzma"));
+            t.getPatchedJar().set(location("binPatched.jar"));
+        }));
+
 
         this.runClient = group.add(Tasks.with(project, RUN_CLEANROOM_CLIENT, RunMinecraft.class, t -> {
             t.dependsOn(vanillaTasks.getGroup().get(vanillaTasks.taskName(VanillaTasks.DOWNLOAD_ASSETS)));
@@ -186,15 +192,17 @@ public class CleanroomTasks {
             t.getAssetIndexVersion().set(vanillaTasks.assetIndexId());
             t.getVanillaAssetsLocation().set(Locations.build(project, "assets"));
             t.setWorkingDir(Locations.run(project, version, Environment.CLEANROOM, Side.CLIENT));
-            t.classpath(mcpTasks.mergeJars().map(MergeJars::getMergedJar));
+            t.classpath(mcpTasks.patchJar().get().getModifiedPath());
+            t.classpath(mcpTasks.extractClientResources().map(Copy::getDestinationDir));
+            t.classpath(mcpTasks.extractServerResources().map(Copy::getDestinationDir));
             t.classpath(cleanroomConfig, vanillaTasks.vanillaConfig());
             t.classpath(cleanroomNativesConfig);
             t.environment("target", "fmldevclient");
             t.getMainClass().set("com.cleanroommc.boot.MainClient");
             t.environment( "tweakClass", "net.minecraftforge.fml.common.launcher.FMLTweaker");
             t.environment( "mainClass", "top.outlands.foundation.boot.Foundation");
-            t.environment("MCP_MAPPINGS", mcpTasks.extractMcpConfig().get().getDestinationDir().getAbsolutePath());
-            t.environment("MCP_TO_SRG", mcpTasks.mcpConfig().getSingleFile().getAbsolutePath());
+            t.environment("MCP_MAPPINGS", mcpTasks.srgMapping());
+            t.environment("MCP_TO_SRG", mcpTasks.genSrgMappings().get().getMcpToSrg());
         }));
     }
 
