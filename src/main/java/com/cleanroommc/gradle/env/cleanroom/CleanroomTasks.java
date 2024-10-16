@@ -187,12 +187,14 @@ public class CleanroomTasks {
             t.getVanillaAssetsLocation().set(Locations.build(project, "assets"));
             t.setWorkingDir(Locations.run(project, version, Environment.CLEANROOM, Side.CLIENT));
             t.classpath(mcpTasks.mergeJars().map(MergeJars::getMergedJar));
-            t.classpath(cleanroomConfig);
+            t.classpath(cleanroomConfig, vanillaTasks.vanillaConfig());
             t.classpath(cleanroomNativesConfig);
+            t.environment("target", "fmldevclient");
             t.getMainClass().set("com.cleanroommc.boot.MainClient");
-            //t.args("--tweakClass net.minecraftforge.fml.common.launcher.FMLTweaker");
-            t.environment("tweakClass", "net.minecraftforge.fml.common.launcher.FMLTweaker");
-            t.environment("mainClass", "top.outlands.foundation.boot.Foundation");
+            t.environment( "tweakClass", "net.minecraftforge.fml.common.launcher.FMLTweaker");
+            t.environment( "mainClass", "top.outlands.foundation.boot.Foundation");
+            t.environment("MCP_MAPPINGS", mcpTasks.extractMcpConfig().get().getDestinationDir().getAbsolutePath());
+            t.environment("MCP_TO_SRG", mcpTasks.mcpConfig().getSingleFile().getAbsolutePath());
         }));
     }
 
