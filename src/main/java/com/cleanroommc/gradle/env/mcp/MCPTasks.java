@@ -106,6 +106,8 @@ public class MCPTasks {
         return extractMcpConfig;
     }
 
+    public TaskProvider<Remap> remapJar() {return remapJar;}
+
     public TaskProvider<MergeJars> mergeJars() {
         return mergeJars;
     }
@@ -292,7 +294,7 @@ public class MCPTasks {
 
     }
 
-    private String taskName(String taskName) {
+    public String taskName(String taskName) {
         // return this.version.replace('.', '_') + "_" + taskName;
         return taskName;
     }
