@@ -4,6 +4,7 @@ import com.cleanroommc.gradle.api.Environment;
 import com.cleanroommc.gradle.api.Meta;
 import com.cleanroommc.gradle.api.lazy.Providers;
 import com.cleanroommc.gradle.api.named.Configurations;
+import com.cleanroommc.gradle.api.named.SourceSets;
 import com.cleanroommc.gradle.api.named.dependency.Dependencies;
 import com.cleanroommc.gradle.api.named.task.TaskGroup;
 import com.cleanroommc.gradle.api.named.task.Tasks;
@@ -13,29 +14,27 @@ import com.cleanroommc.gradle.api.patch.bin.ApplyBinPatches;
 import com.cleanroommc.gradle.api.structure.IO;
 import com.cleanroommc.gradle.api.structure.Locations;
 import com.cleanroommc.gradle.api.types.Types;
-import com.cleanroommc.gradle.api.types.json.schema.VersionManifest;
 import com.cleanroommc.gradle.api.types.json.schema.VersionMeta;
 import com.cleanroommc.gradle.env.common.task.RunMinecraft;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
-import com.cleanroommc.gradle.env.mcp.task.*;
+import com.cleanroommc.gradle.env.mcp.task.Remap;
 import com.cleanroommc.gradle.env.vanilla.VanillaTasks;
 import net.minecraftforge.fml.relauncher.Side;
+import org.gradle.api.NamedDomainObjectProvider;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
-import org.gradle.api.artifacts.DependencySet;
-import org.gradle.api.artifacts.ResolvedDependency;
 import org.gradle.api.file.DuplicatesStrategy;
 import org.gradle.api.tasks.Copy;
+import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskProvider;
+import org.gradle.api.tasks.bundling.Jar;
+import org.gradle.api.tasks.compile.JavaCompile;
 
 import javax.inject.Inject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URI;
-import java.util.ArrayDeque;
-import java.util.Set;
 import java.util.function.Supplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -52,6 +51,9 @@ public class CleanroomTasks {
     private final MCPTasks mcpTasks;
     private TaskProvider<RunMinecraft> runClient;
 
+    private NamedDomainObjectProvider<SourceSet> cleanroomminecraft;
+
+
     private Configuration cleanroomConfig, cleanroomNativesConfig;
 
     @Inject
@@ -65,7 +67,16 @@ public class CleanroomTasks {
 
         this.initRepos();
         this.initConfigs();
+        this.initSourceSets();
         this.initTasks();
+    }
+
+    private void initSourceSets() {
+        this.cleanroomminecraft = SourceSets.getOrCreate(this.project, "cleanroomminecraft");
+        this.cleanroomminecraft.configure(set -> {
+            SourceSets.addCompileClasspath(set, this.cleanroomConfig);
+            SourceSets.addRuntimeClasspath(set, this.cleanroomConfig);
+        });
     }
 
     private void initRepos() {
@@ -118,6 +129,27 @@ public class CleanroomTasks {
                     }
                 }
             }
+            for (var library : vanillaTasks.versionMeta().get().libraries()) {
+                if (library.isValidForOS(Platform.CURRENT)) {
+                    Dependencies.add(project, cleanroomConfig, library.name());
+                    if (library.hasNativesForOS(Platform.CURRENT)) {
+                        var osClassifier = library.classifierForOS(Platform.CURRENT);
+                        if (osClassifier != null) {
+                            var path = osClassifier.path();
+                            var matcher = Meta.NATIVES_PATTERN.matcher(path);
+                            if (!matcher.find()) {
+                                throw new IllegalStateException("Failed to match regex for natives path: " + path);
+                            }
+                            var group = matcher.group("group").replace('/', '.');
+                            var name = matcher.group("name");
+                            var version = matcher.group("version");
+                            var classifier = matcher.group("classifier");
+                            var dependencyNotation = "%s:%s:%s:%s".formatted(group, name, version, classifier);
+                            Dependencies.add(project, cleanroomNativesConfig, dependencyNotation);
+                        }
+                    }
+                }
+            }
         });
     }
 
@@ -127,8 +159,8 @@ public class CleanroomTasks {
                 var file = this.location("version.json");
                 if (!file.exists()) {
                     try {
-                        File installer = location("cleanroom-0.2.3-alpha-installer.jar");
-                        var result = IO.download(project, "https://github.com/CleanroomMC/Cleanroom/releases/download/0.2.3-alpha/cleanroom-0.2.3-alpha-installer.jar", installer, dl -> {
+                        File installer = location("cleanroom-0.2.4-alpha-installer.jar");
+                        var result = IO.download(project, "https://github.com/CleanroomMC/Cleanroom/releases/download/0.2.4-alpha/cleanroom-0.2.4-alpha-installer.jar", installer, dl -> {
                             dl.overwrite(false);
                             dl.onlyIfModified(true);
                             dl.onlyIfNewer(true);
@@ -192,7 +224,7 @@ public class CleanroomTasks {
             t.getAssetIndexVersion().set(vanillaTasks.assetIndexId());
             t.getVanillaAssetsLocation().set(Locations.build(project, "assets"));
             t.setWorkingDir(Locations.run(project, version, Environment.CLEANROOM, Side.CLIENT));
-            t.classpath(mcpTasks.patchJar().get().getModifiedPath());
+            t.classpath("G:\\git\\cleanroomarms\\build\\cg\\versions\\1.12.2\\cleanroom\\build\\libs\\cleanroomminecraft\\minecraft-srg-1.12.2.jar");
             t.classpath(mcpTasks.extractClientResources().map(Copy::getDestinationDir));
             t.classpath(mcpTasks.extractServerResources().map(Copy::getDestinationDir));
             t.classpath(cleanroomConfig, vanillaTasks.vanillaConfig());
@@ -204,6 +236,29 @@ public class CleanroomTasks {
             t.environment("MCP_MAPPINGS", mcpTasks.srgMapping());
             t.environment("MCP_TO_SRG", mcpTasks.genSrgMappings().get().getMcpToSrg());
         }));
+
+        var addCleanroomMinecraftSources = group.add(Tasks.unzip(project, "addCleanroomMinecraftSources",
+                this.location("cleamroommcjar.jar"), SourceSets.sourceFrom(cleanroomminecraft)));
+
+        this.cleanroomminecraft.configure(sources -> {
+            Tasks.<JavaCompile>configure(project, sources.getCompileJavaTaskName(), t -> {
+                t.dependsOn(addCleanroomMinecraftSources);
+                t.setGroup(group.getName());
+                t.getJavaCompiler().set(Providers.javaCompiler(project, 21));
+                t.getModularity().getInferModulePath().set(false);
+                t.getDestinationDirectory().set(this.location("build", "classes", sources.getName()));
+            });
+            Tasks.configure(project, sources.getClassesTaskName(), t -> t.setGroup(group.getName()));
+            Tasks.configure(project, sources.getProcessResourcesTaskName(), t -> t.setGroup(group.getName()));
+
+            var minecraftJar = group.add(Tasks.with(project, sources.getJarTaskName(), Jar.class, t -> {
+                t.dependsOn(sources.getClassesTaskName());
+                t.from(Tasks.named(project, sources.getCompileJavaTaskName(), JavaCompile.class).map(JavaCompile::getDestinationDirectory));
+                t.getDestinationDirectory().set(this.location("build", "libs", sources.getName()));
+                t.getArchiveFileName().set("minecraft-srg-1.12.2.jar");
+            }));
+
+        });
     }
 
     private File location(String... paths) {
