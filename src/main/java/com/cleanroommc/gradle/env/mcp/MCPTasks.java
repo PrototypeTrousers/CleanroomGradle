@@ -9,6 +9,7 @@ import com.cleanroommc.gradle.api.named.dependency.Dependencies;
 import com.cleanroommc.gradle.api.named.task.TaskGroup;
 import com.cleanroommc.gradle.api.named.task.Tasks;
 import com.cleanroommc.gradle.api.patch.ApplyDiffs;
+import com.cleanroommc.gradle.api.patch.GenerateDiffs;
 import com.cleanroommc.gradle.api.structure.IO;
 import com.cleanroommc.gradle.api.structure.Locations;
 import com.cleanroommc.gradle.env.common.task.Decompile;
@@ -234,11 +235,24 @@ public class MCPTasks {
             t.modified(this.location("patched.jar"));
         }));
 
+        var cleanup = group.add(Tasks.with(project, "cleanupPatchedJar", CleanUp.class, t -> {
+            t.getDirtyJar().set(patchJar.get().getModifiedPath());
+            t.getCleanJar().set(this.location("cleanedupjar.jar"));
+        }));
+
         this.patchJar2 = group.add(Tasks.with(project, this.taskName(PATCH_JAR2), ApplyDiffs.class, t -> {
-            t.dependsOn(patchJar);
-            t.source(this.location("patched.jar"));
+            t.dependsOn(cleanup);
+            t.getCopyOverSource().set(true);
+            t.source(this.location("cleanedupjar.jar"));
             t.patch(this.location("patches", "patches/minecraft"));
-            t.modified(this.location("patched2.jar"));
+            t.modified(this.location("cleamroommcjar.jar"));
+        }));
+
+        var genDiffs = group.add(Tasks.with(project, "generateDiffs", GenerateDiffs.class, t -> {
+            t.dependsOn(cleanup);
+            t.source(this.location("cleanedupjar.jar"));
+            t.modified(this.location("modified.jar"));
+            t.output(this.location("patchies"));
         }));
 
         var mcpMappingFolder = this.location("mappings", "mcp", "stable", "39");
