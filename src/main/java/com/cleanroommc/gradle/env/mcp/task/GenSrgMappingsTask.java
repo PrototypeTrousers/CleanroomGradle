@@ -3,6 +3,7 @@ package com.cleanroommc.gradle.env.mcp.task;
 import com.cleanroommc.gradle.env.mcp.MethodData;
 import com.cleanroommc.gradle.env.mcp.SrgContainer;
 import de.siegmar.fastcsv.reader.CsvReader;
+import de.siegmar.fastcsv.reader.CsvRecord;
 import de.siegmar.fastcsv.reader.NamedCsvRecord;
 import org.apache.commons.io.Charsets;
 import org.gradle.api.DefaultTask;
@@ -73,14 +74,16 @@ public abstract class GenSrgMappingsTask extends DefaultTask {
         HashMap<String, String> methods = new HashMap<>(5000);
         HashMap<String, String> fields = new HashMap<>(5000);
 
-        CsvReader<NamedCsvRecord> reader = CsvReader.builder().ofNamedCsvRecord(getMethodsCsv().get().getAsFile().getAbsolutePath());
-        for (NamedCsvRecord namedCsvRecord : reader) {
-            methods.put(namedCsvRecord.getField(0), namedCsvRecord.getField(1));
+        try (CsvReader<CsvRecord> csv = CsvReader.builder().ofCsvRecord(getMethodsCsv().get().getAsFile().toPath())) {
+            for (final CsvRecord csvRecord : csv) {
+                methods.put(csvRecord.getField(0), csvRecord.getField(1));
+            }
         }
 
-        CsvReader<NamedCsvRecord> fieldReader = CsvReader.builder().ofNamedCsvRecord(getFieldsCsv().get().getAsFile().getAbsolutePath());
-        for (NamedCsvRecord n : fieldReader) {
-            fields.put(n.getField(0), n.getField(1));
+        try (CsvReader<CsvRecord> csv = CsvReader.builder().ofCsvRecord(getFieldsCsv().get().getAsFile().toPath())) {
+            for (final CsvRecord csvRecord : csv) {
+                fields.put(csvRecord.getField(0), csvRecord.getField(1));
+            }
         }
 
         SrgContainer inSrg = new SrgContainer().readSrg(getInputSrg().get().getAsFile());

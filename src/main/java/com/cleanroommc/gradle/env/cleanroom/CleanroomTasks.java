@@ -17,6 +17,7 @@ import com.cleanroommc.gradle.api.types.Types;
 import com.cleanroommc.gradle.api.types.json.schema.VersionMeta;
 import com.cleanroommc.gradle.env.common.task.RunMinecraft;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
+import com.cleanroommc.gradle.env.mcp.task.FormatSRG;
 import com.cleanroommc.gradle.env.mcp.task.Remap;
 import com.cleanroommc.gradle.env.vanilla.VanillaTasks;
 import net.minecraftforge.fml.relauncher.Side;
@@ -186,6 +187,18 @@ public class CleanroomTasks {
                                     }
                                     break;  // Stop after finding the desired file
                                 }
+                                if (entry.getName().equals("forge.exc")) {
+                                    // Open an output stream to write the extracted file
+                                    try (FileOutputStream outFile = new FileOutputStream(mcpTasks.location("mappings", "forge.exc"))) {
+                                        byte[] buffer = new byte[1024];
+                                        int len;
+                                        while ((len = zipIn.read(buffer)) > 0) {
+                                            outFile.write(buffer, 0, len);
+                                        }
+                                        System.out.println("File extracted: " + "version.json");
+                                    }
+                                    break;  // Stop after finding the desired file
+                                }
                                 zipIn.closeEntry();
                             }
                         } catch (IOException e) {
@@ -215,9 +228,12 @@ public class CleanroomTasks {
             t.getPatchedJar().set(location("binPatched.jar"));
         }));
 
+        var formatSrg = group.add(Tasks.with(this.project, "formatSrg", FormatSRG.class, t -> {
+            t.getSrg().set(mcpTasks.genSrgMappings().get().getSrgToMcp());
+        }));
 
         this.runClient = group.add(Tasks.with(project, RUN_CLEANROOM_CLIENT, RunMinecraft.class, t -> {
-            t.dependsOn(vanillaTasks.getGroup().get(vanillaTasks.taskName(VanillaTasks.DOWNLOAD_ASSETS)));
+            t.dependsOn(vanillaTasks.getGroup().get(vanillaTasks.taskName(VanillaTasks.DOWNLOAD_ASSETS)), formatSrg);
             t.getMinecraftVersion().set(version);
             t.getSide().set(Side.CLIENT);
             t.getNatives().fileProvider(extractNatives.map(Copy::getDestinationDir));
@@ -234,7 +250,7 @@ public class CleanroomTasks {
             t.environment( "tweakClass", "net.minecraftforge.fml.common.launcher.FMLTweaker");
             t.environment( "mainClass", "top.outlands.foundation.boot.Foundation");
             t.environment("MCP_MAPPINGS", mcpTasks.srgMapping());
-            t.environment("MCP_TO_SRG", mcpTasks.genSrgMappings().get().getMcpToSrg());
+            t.environment("MCP_TO_SRG", formatSrg.get().getOutput());
         }));
 
         var addCleanroomMinecraftSources = group.add(Tasks.unzip(project, "addCleanroomMinecraftSources",

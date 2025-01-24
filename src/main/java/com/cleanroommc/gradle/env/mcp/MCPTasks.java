@@ -264,7 +264,7 @@ public class MCPTasks {
             t.getInputSrg().set(srgMapping().get());
             t.getFieldsCsv().set(Locations.file(mcpMappingFolder, "fields.csv"));
             t.getMethodsCsv().set(Locations.file(mcpMappingFolder, "methods.csv"));
-            t.getInputExc().set(Locations.file(mcpMappingFolder, "forge.exc"));
+            t.getInputExc().set(Locations.file(this.location("mappings", "forge.exc")));
             t.getNotchToSrg().set(Locations.file(mcpMappingFolder, "notch-srg.srg"));
             t.getNotchToMcp().set(Locations.file(mcpMappingFolder, "notch-mcp.srg"));
             t.getSrgToMcp().set(Locations.file(mcpMappingFolder, "srg-mcp.srg"));
@@ -363,7 +363,7 @@ public class MCPTasks {
         return taskName;
     }
 
-    private File location(String... paths) {
+    public File location(String... paths) {
         return Locations.file(this.cache, paths);
     }
 
