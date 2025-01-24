@@ -254,7 +254,7 @@ public class CleanroomTasks {
         }));
 
         var addCleanroomMinecraftSources = group.add(Tasks.unzip(project, "addCleanroomMinecraftSources",
-                this.location("cleamroommcjar.jar"), SourceSets.sourceFrom(cleanroomminecraft)));
+                mcpTasks.location("cleamroommcjar.jar"), SourceSets.sourceFrom(cleanroomminecraft)));
 
         this.cleanroomminecraft.configure(sources -> {
             Tasks.<JavaCompile>configure(project, sources.getCompileJavaTaskName(), t -> {
