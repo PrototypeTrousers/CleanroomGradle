@@ -160,7 +160,8 @@ public class CleanroomTasks {
         return Types.memoizedSupplier(() -> {
             try {
                 var file = this.location("version.json");
-                if (!file.exists()) {
+                var file2 = mcpTasks.location("mappings", "forge.exc");
+                if (!file.exists() || !file.exists()) {
                     try {
                         File installer = location("cleanroom-0.2.4-alpha-installer.jar");
                         var result = IO.download(project, "https://github.com/CleanroomMC/Cleanroom/releases/download/0.2.4-alpha/cleanroom-0.2.4-alpha-installer.jar", installer, dl -> {
