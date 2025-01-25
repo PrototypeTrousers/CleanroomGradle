@@ -173,6 +173,10 @@ public class MCPTasks {
         return patchJar;
     }
 
+    public TaskProvider<ApplyDiffs> patchJar2() {
+        return patchJar2;
+    }
+
     private void initTasks() {
         var project = this.project;
         var group = this.group;
@@ -244,7 +248,7 @@ public class MCPTasks {
             t.dependsOn(cleanup);
             t.getCopyOverSource().set(true);
             t.source(this.location("cleanedupjar.jar"));
-            t.patch(this.location("patches", "patches/minecraft"));
+            t.patch(this.location("patches", "net.zip"));
             t.modified(this.location("cleamroommcjar.jar"));
         }));
 

@@ -76,7 +76,9 @@ public class CleanroomTasks {
         this.cleanroomminecraft = SourceSets.getOrCreate(this.project, "cleanroomminecraft");
         this.cleanroomminecraft.configure(set -> {
             SourceSets.addCompileClasspath(set, this.cleanroomConfig);
+            SourceSets.addCompileClasspath(set, this.vanillaTasks.vanillaConfig());
             SourceSets.addRuntimeClasspath(set, this.cleanroomConfig);
+            SourceSets.addRuntimeClasspath(set, this.vanillaTasks.vanillaConfig());
         });
     }
 
@@ -240,7 +242,7 @@ public class CleanroomTasks {
             t.getAssetIndexVersion().set(vanillaTasks.assetIndexId());
             t.getVanillaAssetsLocation().set(Locations.build(project, "assets"));
             t.setWorkingDir(Locations.run(project, version, Environment.CLEANROOM, Side.CLIENT));
-            t.classpath("G:\\git\\cleanroomarms\\build\\cg\\versions\\1.12.2\\cleanroom\\build\\libs\\cleanroomminecraft\\minecraft-srg-1.12.2.jar");
+            t.classpath(this.location("build", "libs", "minecraft", "minecraft-srg-1.12.2.jar"));
             t.classpath(mcpTasks.extractClientResources().map(Copy::getDestinationDir));
             t.classpath(mcpTasks.extractServerResources().map(Copy::getDestinationDir));
             t.classpath(cleanroomConfig, vanillaTasks.vanillaConfig());
@@ -254,7 +256,7 @@ public class CleanroomTasks {
         }));
 
         var addCleanroomMinecraftSources = group.add(Tasks.unzip(project, "addCleanroomMinecraftSources",
-                mcpTasks.location("cleamroommcjar.jar"), SourceSets.sourceFrom(cleanroomminecraft)));
+                mcpTasks.patchJar2().get().getModifiedPath(), SourceSets.sourceFrom(cleanroomminecraft)));
 
         this.cleanroomminecraft.configure(sources -> {
             Tasks.<JavaCompile>configure(project, sources.getCompileJavaTaskName(), t -> {
