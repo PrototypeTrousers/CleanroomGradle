@@ -6,11 +6,7 @@ import com.cleanroommc.gradle.env.vanilla.VanillaTasks;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
-import java.util.Map;
-
 public class CleanroomGradle implements Plugin<Project> {
-
-    Map<Class<?>, Object> taskMap;
 
     @Override
     public void apply(Project project) {

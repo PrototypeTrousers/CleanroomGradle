@@ -1,18 +1,15 @@
 package com.cleanroommc.gradle.env.mcp;
 
-public class MethodData
-{
+public class MethodData {
     public final String name, sig;
 
-    public MethodData(String name, String sig)
-    {
+    public MethodData(String name, String sig) {
         this.name = name;
         this.sig = sig;
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         final int prime = 31;
         int result = 1;
         result = prime * result + ((name == null) ? 0 : name.hashCode());
@@ -21,8 +18,7 @@ public class MethodData
     }
 
     @Override
-    public boolean equals(Object obj)
-    {
+    public boolean equals(Object obj) {
         if (this == obj)
             return true;
         if (obj == null)
@@ -30,26 +26,18 @@ public class MethodData
         if (getClass() != obj.getClass())
             return false;
         MethodData other = (MethodData) obj;
-        if (name == null)
-        {
+        if (name == null) {
             if (other.name != null)
                 return false;
-        }
-        else if (!name.equals(other.name))
+        } else if (!name.equals(other.name))
             return false;
-        if (sig == null)
-        {
-            if (other.sig != null)
-                return false;
-        }
-        else if (!sig.equals(other.sig))
-            return false;
-        return true;
+        if (sig == null) {
+            return other.sig == null;
+        } else return sig.equals(other.sig);
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return name + " " + sig;
     }
 }

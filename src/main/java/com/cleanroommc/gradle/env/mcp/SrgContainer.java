@@ -10,39 +10,31 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class SrgContainer
-{
-    private static Pattern CLS_ENTRY = Pattern.compile("L([^;]+);");
+public class SrgContainer {
+    private static final Pattern CLS_ENTRY = Pattern.compile("L([^;]+);");
     public final HashMap<String, String> classMap, fieldMap, packageMap;
     public final HashMap<MethodData, MethodData> methodMap;
 
-    public SrgContainer()
-    {
+    public SrgContainer() {
         classMap = new HashMap<>();
-        packageMap =new HashMap<>();
+        packageMap = new HashMap<>();
         fieldMap = new HashMap<>();
         methodMap = new HashMap<>();
     }
 
-    public SrgContainer readSrg(File srg)
-    {
+    public SrgContainer readSrg(File srg) {
         return readSrg(srg, false);
     }
 
-    public SrgContainer readSrg(File srg, boolean reverse)
-    {
-        try
-        {
+    public SrgContainer readSrg(File srg, boolean reverse) {
+        try {
             return readSrg(Files.readAllLines(srg.toPath(), StandardCharsets.UTF_8), reverse);
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private SrgContainer readSrg(List<String> lines, boolean reverse)
-    {
+    private SrgContainer readSrg(List<String> lines, boolean reverse) {
         String currentClass = null;
         lines = lines.stream().map(line -> line.split("#")[0]).collect(Collectors.toList());
 
@@ -58,8 +50,7 @@ public class SrgContainer
                 classMap.put(args[0], args[1]);
         }
 
-        for (String line : lines)
-        {
+        for (String line : lines) {
             int idx = line.indexOf(':');
             if (idx != -1 && line.startsWith("CL:"))
                 continue;
@@ -73,8 +64,7 @@ public class SrgContainer
             }
 
             String[] args = line.split(" ");
-            if (type != null)
-            {
+            if (type != null) {
                 if (type.equals("PK"))
                     packageMap.put(args[0], args[1]);
                 else if (type.equals("CL"))
@@ -85,30 +75,25 @@ public class SrgContainer
                     methodMap.put(new MethodData(args[0], args[1]), new MethodData(args[2], args[3]));
                 else
                     throw new RuntimeException("Invalid SRG Line: " + type + ": " + line);
-            }
-            else
-            {
-              if (args.length == 2)
-              {
-                  if (args[0].endsWith("/")) //Package
-                      packageMap.put(args[0].substring(0, args[0].length() - 1), args[1].substring(0, args[1].length() - 1));
-                  else
-                      currentClass = args[0];
-              }
-              else if (args.length == 3)
-                  fieldMap.put(args[0] + "/" + args[1], remapClass(args[0]) + "/" + args[2]);
-              else if (args.length == 4)
-                  methodMap.put(new MethodData(args[0] + "/" + args[1], args[2]), new MethodData(remapClass(args[0]) + "/" + args[3], remapDesc(args[2])));
-              else
-                  throw new RuntimeException("Invalid CSRG Line: " + type + ": " + line);
+            } else {
+                if (args.length == 2) {
+                    if (args[0].endsWith("/")) //Package
+                        packageMap.put(args[0].substring(0, args[0].length() - 1), args[1].substring(0, args[1].length() - 1));
+                    else
+                        currentClass = args[0];
+                } else if (args.length == 3)
+                    fieldMap.put(args[0] + "/" + args[1], remapClass(args[0]) + "/" + args[2]);
+                else if (args.length == 4)
+                    methodMap.put(new MethodData(args[0] + "/" + args[1], args[2]), new MethodData(remapClass(args[0]) + "/" + args[3], remapDesc(args[2])));
+                else
+                    throw new RuntimeException("Invalid CSRG Line: " + type + ": " + line);
             }
         }
 
         return this;
     }
 
-    private String remapClass(String cls)
-    {
+    private String remapClass(String cls) {
         String ret = classMap.get(cls);
         if (ret != null)
             return ret;
@@ -122,8 +107,7 @@ public class SrgContainer
         return cls;
     }
 
-    private String remapDesc(String desc)
-    {
+    private String remapDesc(String desc) {
         StringBuffer buf = new StringBuffer();
         Matcher matcher = CLS_ENTRY.matcher(desc);
         while (matcher.find()) {
