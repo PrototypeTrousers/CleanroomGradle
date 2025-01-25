@@ -73,9 +73,7 @@ public class CleanroomTasks {
         this.cleanroomminecraft = SourceSets.getOrCreate(this.project, "cleanroomminecraft");
         this.cleanroomminecraft.configure(set -> {
             SourceSets.addCompileClasspath(set, this.cleanroomConfig.get());
-            SourceSets.addCompileClasspath(set, this.vanillaTasks.vanillaConfig().get());
             SourceSets.addRuntimeClasspath(set, this.cleanroomConfig.get());
-            SourceSets.addRuntimeClasspath(set, this.vanillaTasks.vanillaConfig().get());
         });
     }
 
@@ -131,6 +129,11 @@ public class CleanroomTasks {
             }
             for (var library : vanillaTasks.versionMeta().get().libraries()) {
                 if (library.isValidForOS(Platform.CURRENT)) {
+
+                    //TODO find better way to blacklist vanilla libraries.
+                    //or find which ones we need
+
+                    if (library.name().contains("patchy")) continue;
                     Dependencies.add(project, cleanroomConfig, library.name());
                     if (library.hasNativesForOS(Platform.CURRENT)) {
                         var osClassifier = library.classifierForOS(Platform.CURRENT);
@@ -270,7 +273,7 @@ public class CleanroomTasks {
             t.classpath(this.location("build", "libs", "minecraft", "minecraft-srg-1.12.2.jar"));
             t.classpath(mcpTasks.extractClientResources().map(Copy::getDestinationDir));
             t.classpath(mcpTasks.extractServerResources().map(Copy::getDestinationDir));
-            t.classpath(cleanroomConfig, vanillaTasks.vanillaConfig());
+            t.classpath(cleanroomConfig);
             t.classpath(cleanroomNativesConfig);
             t.environment("target", "fmldevclient");
             t.getMainClass().set("com.cleanroommc.boot.MainClient");
