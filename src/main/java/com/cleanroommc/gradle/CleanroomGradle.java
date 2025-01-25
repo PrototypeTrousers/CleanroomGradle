@@ -1,10 +1,8 @@
 package com.cleanroommc.gradle;
 
 import com.cleanroommc.gradle.env.cleanroom.CleanroomTasks;
-import com.cleanroommc.gradle.env.forge.ForgeTasks;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
 import com.cleanroommc.gradle.env.vanilla.VanillaTasks;
-import com.cleanroommc.gradle.env.extensions.RelauncherExtension;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
@@ -31,7 +29,6 @@ public class CleanroomGradle implements Plugin<Project> {
 
         //var forgeTasks = new ForgeTasks(project, vanillaTasks, mcpTasks, "1.12.2");
         var cleanroomTasks = new CleanroomTasks(project, vanillaTasks, mcpTasks, "1.12.2");
-        var extension = project.getExtensions().create("relauncher", RelauncherExtension.class);
     }
 
 }

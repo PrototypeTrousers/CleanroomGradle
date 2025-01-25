@@ -32,10 +32,7 @@ import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.api.tasks.compile.JavaCompile;
 
 import javax.inject.Inject;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.function.Supplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -171,6 +168,8 @@ public class CleanroomTasks {
                             dl.dest(installer);
                         });
                         result.join();
+
+                        int foundFiles = 0;
                         try (ZipInputStream zipIn = new ZipInputStream(new FileInputStream(installer))) {
                             ZipEntry entry;
 
@@ -178,30 +177,56 @@ public class CleanroomTasks {
                             while ((entry = zipIn.getNextEntry()) != null) {
                                 if (entry.getName().equals("version.json")) {
 
-                                    // Open an output stream to write the extracted file
+                                    // Extract the version.json file
                                     try (FileOutputStream outFile = new FileOutputStream(location("version.json"))) {
                                         byte[] buffer = new byte[1024];
                                         int len;
                                         while ((len = zipIn.read(buffer)) > 0) {
                                             outFile.write(buffer, 0, len);
                                         }
-                                        System.out.println("File extracted: " + "version.json");
+                                        System.out.println("File extracted: version.json");
                                     }
-                                    break;  // Stop after finding the desired file
+                                    foundFiles++;
                                 }
-                                if (entry.getName().equals("forge.exc")) {
-                                    // Open an output stream to write the extracted file
-                                    try (FileOutputStream outFile = new FileOutputStream(mcpTasks.location("mappings", "forge.exc"))) {
-                                        byte[] buffer = new byte[1024];
-                                        int len;
-                                        while ((len = zipIn.read(buffer)) > 0) {
-                                            outFile.write(buffer, 0, len);
+
+                                // If a .jar file is found, search inside it for forge.exc
+                                if (entry.getName().endsWith(".jar")) {
+                                    System.out.println("Found nested JAR: " + entry.getName());
+
+                                    // Load the .jar file from the ZIP entry
+                                    ByteArrayOutputStream jarBuffer = new ByteArrayOutputStream();
+                                    byte[] buffer = new byte[1024];
+                                    int len;
+                                    while ((len = zipIn.read(buffer)) > 0) {
+                                        jarBuffer.write(buffer, 0, len);
+                                    }
+
+                                    // Open the .jar file
+                                    try (ZipInputStream jarIn = new ZipInputStream(new ByteArrayInputStream(jarBuffer.toByteArray()))) {
+                                        ZipEntry jarEntry;
+
+                                        // Iterate through the .jar file entries
+                                        while ((jarEntry = jarIn.getNextEntry()) != null) {
+                                            if (jarEntry.getName().equals("forge.exc")) {
+
+                                                // Extract forge.exc file
+                                                try (FileOutputStream outFile = new FileOutputStream(mcpTasks.location("mappings", "forge.exc"))) {
+                                                    while ((len = jarIn.read(buffer)) > 0) {
+                                                        outFile.write(buffer, 0, len);
+                                                    }
+                                                    System.out.println("File extracted: forge.exc");
+                                                }
+                                                foundFiles++;
+                                                break; // Stop searching inside the .jar once forge.exc is found
+                                            }
                                         }
-                                        System.out.println("File extracted: " + "version.json");
                                     }
-                                    break;  // Stop after finding the desired file
                                 }
+
                                 zipIn.closeEntry();
+                                if (foundFiles == 2) {
+                                    break; // Stop if both files are found
+                                }
                             }
                         } catch (IOException e) {
                             throw new RuntimeException("Unable to extract version manifest from cleanroom installer jar!", e);
