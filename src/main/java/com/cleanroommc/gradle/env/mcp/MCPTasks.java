@@ -261,7 +261,7 @@ public class MCPTasks {
 
         var mcpMappingFolder = this.location("mappings", "mcp", "stable", "39");
 
-        this.extractMcpMappings = group.add(Tasks.unzip(project, this.taskName(EXTRACT_MCP_MAPPINGS), this.mcpMappingConfig, mcpMappingFolder));
+        this.extractMcpMappings = group.add(Tasks.unzipConf(project, this.taskName(EXTRACT_MCP_MAPPINGS), this.mcpMappingConfig, mcpMappingFolder));
 
         this.genSrgMappings = group.add(Tasks.with(this.project, "genSrg", GenSrgMappingsTask.class, t -> {
             t.dependsOn(this.extractMcpMappings);

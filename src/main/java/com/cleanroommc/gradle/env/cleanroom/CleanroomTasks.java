@@ -244,7 +244,7 @@ public class CleanroomTasks {
 
     private void initTasks() {
 
-        var extractNatives = group.add(Tasks.unzip(project, EXTRACT_CLEANROOM_NATIVES, cleanroomNativesConfig, location("natives"), t -> {
+        var extractNatives = group.add(Tasks.unzipConf(project, EXTRACT_CLEANROOM_NATIVES, cleanroomNativesConfig, location("natives"), t -> {
             t.exclude("META-INF/**");
             t.setDuplicatesStrategy(DuplicatesStrategy.INCLUDE);
         }));
