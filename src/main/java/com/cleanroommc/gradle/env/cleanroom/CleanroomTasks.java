@@ -52,7 +52,7 @@ public class CleanroomTasks {
     private NamedDomainObjectProvider<SourceSet> cleanroomminecraft;
 
 
-    private Configuration cleanroomConfig, cleanroomNativesConfig;
+    private NamedDomainObjectProvider<Configuration> cleanroomConfig, cleanroomNativesConfig;
 
     @Inject
     public CleanroomTasks(Project project, VanillaTasks vanillaTasks, MCPTasks mcpTasks, String minecraftVersion) {
@@ -72,10 +72,10 @@ public class CleanroomTasks {
     private void initSourceSets() {
         this.cleanroomminecraft = SourceSets.getOrCreate(this.project, "cleanroomminecraft");
         this.cleanroomminecraft.configure(set -> {
-            SourceSets.addCompileClasspath(set, this.cleanroomConfig);
-            SourceSets.addCompileClasspath(set, this.vanillaTasks.vanillaConfig());
-            SourceSets.addRuntimeClasspath(set, this.cleanroomConfig);
-            SourceSets.addRuntimeClasspath(set, this.vanillaTasks.vanillaConfig());
+            SourceSets.addCompileClasspath(set, this.cleanroomConfig.get());
+            SourceSets.addCompileClasspath(set, this.vanillaTasks.vanillaConfig().get());
+            SourceSets.addRuntimeClasspath(set, this.cleanroomConfig.get());
+            SourceSets.addRuntimeClasspath(set, this.vanillaTasks.vanillaConfig().get());
         });
     }
 
@@ -104,8 +104,8 @@ public class CleanroomTasks {
     }
 
     private void initConfigs() {
-        this.cleanroomConfig = Configurations.of(this.project, "cleanroom" + this.version.replace('.', '_'), true).get();
-        this.cleanroomNativesConfig = Configurations.of(this.project, "cleanroomNatives" + this.version.replace('.', '_'), true).get();
+        this.cleanroomConfig = Configurations.of(this.project, "cleanroom" + this.version.replace('.', '_'), true);
+        this.cleanroomNativesConfig = Configurations.of(this.project, "cleanroomNatives" + this.version.replace('.', '_'), true);
 
         this.project.afterEvaluate(project -> {
             for (var library : versionMeta().get().libraries()) {

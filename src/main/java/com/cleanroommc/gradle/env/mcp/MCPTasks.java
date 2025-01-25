@@ -144,8 +144,8 @@ public class MCPTasks {
     }
 
     private void initConfigs() {
-        this.mcpConfig = Configurations.of(this.project, "mcp_" + this.version.replace('.', '_')).get();
-        this.mcpMappingConfig = Configurations.of(this.project, "mcpMapping_" + this.version.replace('.', '_')).get();
+        this.mcpConfig = Configurations.of(this.project, "mcp_" + this.version.replace('.', '_'));
+        this.mcpMappingConfig = Configurations.of(this.project, "mcpMapping_" + this.version.replace('.', '_'));
 
         this.project.afterEvaluate($ -> {
             Dependencies.add(this.project, this.mcpConfig, "de.oceanlabs.mcp:mcp_config:1.12.2-20201025.185735");
