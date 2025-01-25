@@ -270,7 +270,7 @@ public class CleanroomTasks {
             t.getAssetIndexVersion().set(vanillaTasks.assetIndexId());
             t.getVanillaAssetsLocation().set(Locations.build(project, "assets"));
             t.setWorkingDir(Locations.run(project, version, Environment.CLEANROOM, Side.CLIENT));
-            t.classpath(this.location("build", "libs", "minecraft", "minecraft-srg-1.12.2.jar"));
+            t.classpath(this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"));
             t.classpath(mcpTasks.extractClientResources().map(Copy::getDestinationDir));
             t.classpath(mcpTasks.extractServerResources().map(Copy::getDestinationDir));
             t.classpath(cleanroomConfig);
@@ -284,10 +284,11 @@ public class CleanroomTasks {
         }));
 
         var addCleanroomMinecraftSources = group.add(Tasks.unzip(project, "addCleanroomMinecraftSources",
-                mcpTasks.patchJar2().get().getModifiedPath(), SourceSets.sourceFrom(cleanroomminecraft)));
+                mcpTasks.remapJar2().get().getRemappedJar(), SourceSets.sourceFrom(cleanroomminecraft)));
 
         this.cleanroomminecraft.configure(sources -> {
             Tasks.<JavaCompile>configure(project, sources.getCompileJavaTaskName(), t -> {
+                //TODO add a way to not overwrite the source every compilation
                 t.dependsOn(addCleanroomMinecraftSources);
                 t.setGroup(group.getName());
                 t.getJavaCompiler().set(Providers.javaCompiler(project, 21));

@@ -47,6 +47,7 @@ public class MCPTasks {
     public static final String PATCH_JAR = "patchJar";
     public static final String EXTRACT_MCP_MAPPINGS = "extractMcpMappings";
     public static final String REMAP_JAR = "remapJar";
+    public static final String REMAP_JAR2 = "remapCleanroomJar";
     public static final String ADD_MINECRAFT_SOURCES = "addMinecraftSources";
     public static final String RUN_SRG_CLIENT = "runSrgClient";
     public static final String RUN_SRG_SERVER = "runSrgServer";
@@ -72,6 +73,7 @@ public class MCPTasks {
     private TaskProvider<DefaultTask> extractSrgPatches;
     private TaskProvider<ApplyDiffs> patchJar;
     private TaskProvider<Remap> remapJar;
+    private TaskProvider<Remap> remapJar2;
     private TaskProvider<RunMinecraft> runSrgClient, runSrgServer, runMcpClient, runMcpServer;
     private TaskProvider<Obfuscate> obfuscate;
     private TaskProvider<GenSrgMappingsTask> genSrgMappings;
@@ -110,6 +112,8 @@ public class MCPTasks {
     }
 
     public TaskProvider<Remap> remapJar() {return remapJar;}
+
+    public TaskProvider<Remap> remapJar2() {return remapJar2;}
 
     public TaskProvider<MergeJars> mergeJars() {
         return mergeJars;
@@ -285,6 +289,15 @@ public class MCPTasks {
             t.getMethodMappings().set(Locations.file(mcpMappingFolder, "methods.csv"));
             t.getParameterMappings().set(Locations.file(mcpMappingFolder, "params.csv"));
             t.getRemappedJar().set(this.location("remapped.jar"));
+        }));
+
+        this.remapJar2 = group.add(Tasks.with(project, this.taskName(REMAP_JAR2), Remap.class, t -> {
+            t.dependsOn(this.extractMcpMappings);
+            t.getSrgJar().fileProvider(this.patchJar2.map(ApplyDiffs::getModifiedPath));
+            t.getFieldMappings().set(Locations.file(mcpMappingFolder, "fields.csv"));
+            t.getMethodMappings().set(Locations.file(mcpMappingFolder, "methods.csv"));
+            t.getParameterMappings().set(Locations.file(mcpMappingFolder, "params.csv"));
+            t.getRemappedJar().set(this.location("remappedcleanroomjar.jar"));
         }));
 
         var addMinecraftSources = group.add(Tasks.unzip(project, this.taskName(ADD_MINECRAFT_SOURCES),
