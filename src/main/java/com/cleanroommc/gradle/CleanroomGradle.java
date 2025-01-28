@@ -1,6 +1,7 @@
 package com.cleanroommc.gradle;
 
 import com.cleanroommc.gradle.env.cleanroom.CleanroomTasks;
+import com.cleanroommc.gradle.env.cleanroom.extension.CleanroomExtension;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
 import com.cleanroommc.gradle.env.vanilla.VanillaTasks;
 import org.gradle.api.Plugin;
@@ -23,8 +24,18 @@ public class CleanroomGradle implements Plugin<Project> {
         var mcpTasks = new MCPTasks(project, vanillaTasks);
         // var mcpTasks = objectFactory.newInstance(MCPTasks.class, project, vanillaTasks);
 
-        //var forgeTasks = new ForgeTasks(project, vanillaTasks, mcpTasks, "1.12.2");
         var cleanroomTasks = new CleanroomTasks(project, vanillaTasks, mcpTasks, "1.12.2");
+
+        project.getExtensions().create(
+                "cleanroom",
+                CleanroomExtension.class,
+                project);
+
+        project.afterEvaluate(_p -> {
+            project.getConfigurations().getByName("runtimeClasspath").extendsFrom(
+                    ((CleanroomExtension )_p.getExtensions().getByName("cleanroom")).getDependencies());
+        });
+
     }
 
 }
