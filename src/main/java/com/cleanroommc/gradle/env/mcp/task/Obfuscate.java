@@ -2,10 +2,10 @@ package com.cleanroommc.gradle.env.mcp.task;
 
 import com.cleanroommc.gradle.api.named.task.JarTransformer;
 import com.cleanroommc.gradle.api.named.task.type.MavenJarExec;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.provider.ListProperty;
+import org.gradle.api.tasks.*;
 
 public abstract class Obfuscate extends MavenJarExec implements JarTransformer {
 
@@ -22,9 +22,17 @@ public abstract class Obfuscate extends MavenJarExec implements JarTransformer {
     @InputFile
     public abstract RegularFileProperty getDeobfuscatedJar();
 
+    @Input
+    public abstract ListProperty<String> getExtraSrgEntries();
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract ConfigurableFileCollection getExtraSrgFiles();
+
     public Obfuscate() {
         super("obfuscate", "net.md-5:SpecialSource:1.11.3");
         this.getMainClass().set("net.md_5.specialsource.SpecialSource");
+        getExtraSrgFiles().forEach(ex -> this.args("--srg-in", ex));
         this.args("--in-jar", getDeobfuscatedJar(),
                 "--out-jar", getObfuscatedJar(),
                 "--srg-in", getSrgMappingFile(),
@@ -39,5 +47,4 @@ public abstract class Obfuscate extends MavenJarExec implements JarTransformer {
             this.args("--access-transformer", this.getAccessTransformerFile());
         }
     }
-
 }

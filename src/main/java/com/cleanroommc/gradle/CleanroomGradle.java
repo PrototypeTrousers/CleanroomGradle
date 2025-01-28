@@ -3,6 +3,7 @@ package com.cleanroommc.gradle;
 import com.cleanroommc.gradle.env.cleanroom.CleanroomTasks;
 import com.cleanroommc.gradle.env.cleanroom.extension.CleanroomExtension;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
+import com.cleanroommc.gradle.env.mixins.MixinProps;
 import com.cleanroommc.gradle.env.vanilla.VanillaTasks;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -25,11 +26,12 @@ public class CleanroomGradle implements Plugin<Project> {
         // var mcpTasks = objectFactory.newInstance(MCPTasks.class, project, vanillaTasks);
 
         var cleanroomTasks = new CleanroomTasks(project, vanillaTasks, mcpTasks, "1.12.2");
+        var mixinProps = new MixinProps(project);
+        project.getExtensions().add("mixinProps", mixinProps);
 
         project.getExtensions().create(
                 "cleanroom",
                 CleanroomExtension.class,
                 project);
     }
-
 }
