@@ -30,12 +30,6 @@ public class CleanroomGradle implements Plugin<Project> {
                 "cleanroom",
                 CleanroomExtension.class,
                 project);
-
-        project.afterEvaluate(_p -> {
-            project.getConfigurations().getByName("runtimeClasspath").extendsFrom(
-                    ((CleanroomExtension )_p.getExtensions().getByName("cleanroom")).getDependencies());
-        });
-
     }
 
 }

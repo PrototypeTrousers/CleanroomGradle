@@ -25,6 +25,7 @@ import org.gradle.api.NamedDomainObjectProvider;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.DuplicatesStrategy;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskProvider;
@@ -276,6 +277,11 @@ public class CleanroomTasks {
             t.classpath(mcpTasks.extractServerResources().map(Copy::getDestinationDir));
             t.classpath(cleanroomConfig);
             t.classpath(cleanroomNativesConfig);
+            FileTree ft = project.fileTree("build/libs");
+            ft.getFiles().forEach(f -> {
+                t.classpath(project.relativePath(f.getAbsolutePath()));
+            });
+            t.classpath("build/libs/mechanicalarms-1.12.2-1.0.0.jar");
             t.environment("target", "fmldevclient");
             t.getMainClass().set("com.cleanroommc.boot.MainClient");
             t.environment( "tweakClass", "net.minecraftforge.fml.common.launcher.FMLTweaker");
