@@ -15,8 +15,10 @@ import com.cleanroommc.gradle.api.structure.IO;
 import com.cleanroommc.gradle.api.structure.Locations;
 import com.cleanroommc.gradle.api.types.Types;
 import com.cleanroommc.gradle.api.types.json.schema.VersionMeta;
+import com.cleanroommc.gradle.env.cleanroom.task.AccessTransform;
 import com.cleanroommc.gradle.env.common.task.RunMinecraft;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
+import com.cleanroommc.gradle.env.mcp.task.CleanUp;
 import com.cleanroommc.gradle.env.mcp.task.FormatSRG;
 import com.cleanroommc.gradle.env.mcp.task.Remap;
 import com.cleanroommc.gradle.env.vanilla.VanillaTasks;
@@ -42,6 +44,9 @@ public class CleanroomTasks {
 
     private static final String RUN_CLEANROOM_CLIENT = "runCleanroomClient";
     private static final String EXTRACT_CLEANROOM_NATIVES = "extractCleanroomNatives";
+    private static final String PATCH_JAR2 = "patchJarwithCleanroomPatches";
+    public static final String REMAP_JAR2 = "remapCleanroomJar";
+
     private final Project project;
     private final String version;
     private final TaskGroup group;
@@ -49,6 +54,9 @@ public class CleanroomTasks {
     private final VanillaTasks vanillaTasks;
     private final MCPTasks mcpTasks;
     private TaskProvider<RunMinecraft> runClient;
+    private TaskProvider<ApplyDiffs> patchJar2;
+    private TaskProvider<Remap> remapJar2;
+
 
     private NamedDomainObjectProvider<SourceSet> cleanroomminecraft;
 
@@ -290,8 +298,33 @@ public class CleanroomTasks {
             t.environment("MCP_TO_SRG", formatSrg.get().getOutput());
         }));
 
+        this.patchJar2 = group.add(Tasks.with(project, this.taskName(PATCH_JAR2), ApplyDiffs.class, t -> {
+            t.dependsOn(mcpTasks.cleanup());
+            t.getCopyOverSource().set(true);
+            t.source(mcpTasks.cleanup().flatMap(CleanUp::getCleanJar));
+            t.patch(mcpTasks.location("patches", "net.zip"));
+            t.modified(this.location("cleamroommcjar.jar"));
+        }));
+
+        var applyAT = group.add(Tasks.with(project, "applymodAT", AccessTransform.class, t ->{
+            t.dependsOn(patchJar2);
+            t.getPreAccessTransformedJar().set(patchJar2.get().getModifiedPath());
+            //TODO get this path from project
+            t.getAccessFile().set(new File("G:\\git\\cleanroomarms\\src\\main\\resources\\META-INF\\arm_at.cfg"));
+            t.getPostAccessTransformedJar().set(this.location("atjar.jar"));
+        }));
+
+        this.remapJar2 = group.add(Tasks.with(project, this.taskName(REMAP_JAR2), Remap.class, t -> {
+            t.dependsOn(mcpTasks.extractMcpMappings(), applyAT);
+            t.getSrgJar().set(applyAT.flatMap(AccessTransform::getPostAccessTransformedJar));
+            t.getFieldMappings().set(Locations.file(mcpTasks.mcpMappingFolder(), "fields.csv"));
+            t.getMethodMappings().set(Locations.file(mcpTasks.mcpMappingFolder(), "methods.csv"));
+            t.getParameterMappings().set(Locations.file(mcpTasks.mcpMappingFolder(), "params.csv"));
+            t.getRemappedJar().set(this.location("remappedcleanroomjar.jar"));
+        }));
+
         var addCleanroomMinecraftSources = group.add(Tasks.unzip(project, "addCleanroomMinecraftSources",
-                mcpTasks.remapJar2().get().getRemappedJar(), SourceSets.sourceFrom(cleanroomminecraft)));
+                this.remapJar2.get().getRemappedJar(), SourceSets.sourceFrom(cleanroomminecraft)));
 
         this.cleanroomminecraft.configure(sources -> {
             Tasks.<JavaCompile>configure(project, sources.getCompileJavaTaskName(), t -> {
@@ -315,7 +348,18 @@ public class CleanroomTasks {
         });
     }
 
+    public TaskProvider<Remap> remapJar2() {return remapJar2;}
+
+    public TaskProvider<ApplyDiffs> patchJar2() {
+        return patchJar2;
+    }
+
     private File location(String... paths) {
         return Locations.file(this.cache, paths);
+    }
+
+    public String taskName(String taskName) {
+        // return this.version.replace('.', '_') + "_" + taskName;
+        return taskName;
     }
 }

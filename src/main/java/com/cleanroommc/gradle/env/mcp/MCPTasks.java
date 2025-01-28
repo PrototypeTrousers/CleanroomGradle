@@ -47,13 +47,11 @@ public class MCPTasks {
     public static final String PATCH_JAR = "patchJar";
     public static final String EXTRACT_MCP_MAPPINGS = "extractMcpMappings";
     public static final String REMAP_JAR = "remapJar";
-    public static final String REMAP_JAR2 = "remapCleanroomJar";
     public static final String ADD_MINECRAFT_SOURCES = "addMinecraftSources";
     public static final String RUN_SRG_CLIENT = "runSrgClient";
     public static final String RUN_SRG_SERVER = "runSrgServer";
     public static final String RUN_MCP_CLIENT = "runMcpClient";
     public static final String RUN_MCP_SERVER = "runMcpServer";
-    private static final String PATCH_JAR2 = "patchJarwithForgePatches";
 
     private final Project project;
     private final String version;
@@ -73,11 +71,11 @@ public class MCPTasks {
     private TaskProvider<DefaultTask> extractSrgPatches;
     private TaskProvider<ApplyDiffs> patchJar;
     private TaskProvider<Remap> remapJar;
-    private TaskProvider<Remap> remapJar2;
     private TaskProvider<RunMinecraft> runSrgClient, runSrgServer, runMcpClient, runMcpServer;
     private TaskProvider<Obfuscate> obfuscate;
     private TaskProvider<GenSrgMappingsTask> genSrgMappings;
-    private TaskProvider<ApplyDiffs> patchJar2;
+    private TaskProvider<CleanUp> cleanup;
+    private File mcpMappingFolder;
 
     public MCPTasks(Project project, VanillaTasks vanillaTasks) {
         this.project = project;
@@ -112,8 +110,6 @@ public class MCPTasks {
     }
 
     public TaskProvider<Remap> remapJar() {return remapJar;}
-
-    public TaskProvider<Remap> remapJar2() {return remapJar2;}
 
     public TaskProvider<MergeJars> mergeJars() {
         return mergeJars;
@@ -175,10 +171,6 @@ public class MCPTasks {
 
     public TaskProvider<ApplyDiffs> patchJar() {
         return patchJar;
-    }
-
-    public TaskProvider<ApplyDiffs> patchJar2() {
-        return patchJar2;
     }
 
     private void initTasks() {
@@ -243,17 +235,10 @@ public class MCPTasks {
             t.modified(this.location("patched.jar"));
         }));
 
-        var cleanup = group.add(Tasks.with(project, "cleanupPatchedJar", CleanUp.class, t -> {
+        this.cleanup = group.add(Tasks.with(project, "cleanupPatchedJar", CleanUp.class, t -> {
+            t.dependsOn(patchJar);
             t.getDirtyJar().set(patchJar.get().getModifiedPath());
             t.getCleanJar().set(this.location("cleanedupjar.jar"));
-        }));
-
-        this.patchJar2 = group.add(Tasks.with(project, this.taskName(PATCH_JAR2), ApplyDiffs.class, t -> {
-            t.dependsOn(cleanup);
-            t.getCopyOverSource().set(true);
-            t.source(this.location("cleanedupjar.jar"));
-            t.patch(this.location("patches", "net.zip"));
-            t.modified(this.location("cleamroommcjar.jar"));
         }));
 
         var genDiffs = group.add(Tasks.with(project, "generateDiffs", GenerateDiffs.class, t -> {
@@ -263,7 +248,7 @@ public class MCPTasks {
             t.output(this.location("patchies"));
         }));
 
-        var mcpMappingFolder = this.location("mappings", "mcp", "stable", "39");
+        this.mcpMappingFolder = this.location("mappings", "mcp", "stable", "39");
 
         this.extractMcpMappings = group.add(Tasks.unzipConf(project, this.taskName(EXTRACT_MCP_MAPPINGS), this.mcpMappingConfig, mcpMappingFolder));
 
@@ -289,15 +274,6 @@ public class MCPTasks {
             t.getMethodMappings().set(Locations.file(mcpMappingFolder, "methods.csv"));
             t.getParameterMappings().set(Locations.file(mcpMappingFolder, "params.csv"));
             t.getRemappedJar().set(this.location("remapped.jar"));
-        }));
-
-        this.remapJar2 = group.add(Tasks.with(project, this.taskName(REMAP_JAR2), Remap.class, t -> {
-            t.dependsOn(this.extractMcpMappings);
-            t.getSrgJar().fileProvider(this.patchJar2.map(ApplyDiffs::getModifiedPath));
-            t.getFieldMappings().set(Locations.file(mcpMappingFolder, "fields.csv"));
-            t.getMethodMappings().set(Locations.file(mcpMappingFolder, "methods.csv"));
-            t.getParameterMappings().set(Locations.file(mcpMappingFolder, "params.csv"));
-            t.getRemappedJar().set(this.location("remappedcleanroomjar.jar"));
         }));
 
         var addMinecraftSources = group.add(Tasks.unzip(project, this.taskName(ADD_MINECRAFT_SOURCES),
@@ -394,5 +370,17 @@ public class MCPTasks {
 
     public TaskProvider<Decompile> decompile() {
         return decompile;
+    }
+
+    public TaskProvider<CleanUp> cleanup() {
+        return cleanup;
+    }
+
+    public Object extractMcpMappings() {
+        return extractMcpMappings;
+    }
+
+    public File mcpMappingFolder() {
+        return mcpMappingFolder;
     }
 }
