@@ -1,6 +1,10 @@
 package com.cleanroommc.gradle.api.named.extension;
 
 import com.cleanroommc.gradle.api.named.Configurations;
+import com.cleanroommc.gradle.api.named.SourceSets;
+import com.cleanroommc.gradle.api.named.dependency.Dependencies;
+import com.cleanroommc.gradle.api.os.Platform;
+import com.cleanroommc.gradle.env.cleanroom.CleanroomTasks;
 import org.gradle.api.NamedDomainObjectProvider;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -9,14 +13,22 @@ import org.gradle.api.plugins.ExtensionAware;
 public abstract class CleanroomExtension implements ExtensionAware {
 
     public static final String EXT_NAME = "cleanroom";
+    private final Project project;
 
-    private final NamedDomainObjectProvider<Configuration> dependencies;
+    private NamedDomainObjectProvider<Configuration> config;
 
     public CleanroomExtension(Project project) {
-        this.dependencies = Configurations.of(project, EXT_NAME, true);
+        this.project = project;
+        this.config = Configurations.of(project, EXT_NAME);
     }
 
-    public Configuration getDependencies() {
-        return dependencies.get();
+    public void implementation(String notation) {
+        Dependencies.add(project, config, notation);
+    }
+
+    public void compileOnly(String notation) { implementation(notation); } //compileOnly
+
+    public NamedDomainObjectProvider<Configuration> config() {
+        return config;
     }
 }

@@ -24,11 +24,12 @@ public class CleanroomGradle implements Plugin<Project> {
         // var vanillaTasks = objectFactory.newInstance(VanillaTasks.class, project, "1.12.2");
         var mcpTasks = new MCPTasks(project, vanillaTasks);
         // var mcpTasks = objectFactory.newInstance(MCPTasks.class, project, vanillaTasks);
-        project.getExtensions().create(
+        var cleanExtension = project.getExtensions().create(
                 "cleanroom",
                 CleanroomExtension.class,
-                project);
-        var cleanroomTasks = new CleanroomTasks(project, vanillaTasks, mcpTasks, "1.12.2");
+                project
+        );
+        var cleanroomTasks = new CleanroomTasks(project, vanillaTasks, mcpTasks, cleanExtension, "1.12.2");
         var mixinProps = new MixinProps(project);
         project.getExtensions().add("mixinProps", mixinProps);
 

@@ -6,6 +6,7 @@ import com.cleanroommc.gradle.api.lazy.Providers;
 import com.cleanroommc.gradle.api.named.Configurations;
 import com.cleanroommc.gradle.api.named.SourceSets;
 import com.cleanroommc.gradle.api.named.dependency.Dependencies;
+import com.cleanroommc.gradle.api.named.extension.CleanroomExtension;
 import com.cleanroommc.gradle.api.named.task.TaskGroup;
 import com.cleanroommc.gradle.api.named.task.Tasks;
 import com.cleanroommc.gradle.api.os.Platform;
@@ -53,6 +54,7 @@ public class CleanroomTasks {
     private final File cache;
     private final VanillaTasks vanillaTasks;
     private final MCPTasks mcpTasks;
+    private final CleanroomExtension cleanroomExtension;
     private TaskProvider<RunMinecraft> runClient;
     private TaskProvider<ApplyDiffs> patchJar2;
     private TaskProvider<Remap> remapJar2;
@@ -64,13 +66,14 @@ public class CleanroomTasks {
     private NamedDomainObjectProvider<Configuration> cleanroomConfig, cleanroomNativesConfig;
 
     @Inject
-    public CleanroomTasks(Project project, VanillaTasks vanillaTasks, MCPTasks mcpTasks, String minecraftVersion) {
+    public CleanroomTasks(Project project, VanillaTasks vanillaTasks, MCPTasks mcpTasks, CleanroomExtension cleanroomExtension, String minecraftVersion) {
         this.project = project;
         this.vanillaTasks = vanillaTasks;
         this.mcpTasks = mcpTasks;
         this.version = minecraftVersion;
         this.group = TaskGroup.of("cleanroom " + minecraftVersion);
         this.cache = Locations.build(project, "versions", minecraftVersion, "cleanroom");
+        this.cleanroomExtension = cleanroomExtension;
 
         this.initRepos();
         this.initConfigs();
@@ -285,11 +288,7 @@ public class CleanroomTasks {
             t.classpath(mcpTasks.extractServerResources().map(Copy::getDestinationDir));
             t.classpath(cleanroomConfig);
             t.classpath(cleanroomNativesConfig);
-            FileTree ft = project.fileTree("build/libs");
-            ft.getFiles().forEach(f -> {
-                t.classpath(project.relativePath(f.getAbsolutePath()));
-            });
-            t.classpath("build/libs/mechanicalarms-1.12.2-1.0.0.jar");
+            t.classpath(cleanroomExtension.config());
             t.environment("target", "fmldevclient");
             t.getMainClass().set("com.cleanroommc.boot.MainClient");
             t.environment( "tweakClass", "net.minecraftforge.fml.common.launcher.FMLTweaker");
@@ -307,10 +306,10 @@ public class CleanroomTasks {
         }));
 
         var applyAT = group.add(Tasks.with(project, "applymodAT", AccessTransform.class, t ->{
-            t.dependsOn(patchJar2);
+//            t.dependsOn(patchJar2);
             t.getPreAccessTransformedJar().set(patchJar2.get().getModifiedPath());
             //TODO get this path from project
-            t.getAccessFile().set(new File("G:\\git\\cleanroomarms\\src\\main\\resources\\META-INF\\arm_at.cfg"));
+            t.getAccessFile().set(new File("/mnt/ldata/git/cleanroomarms/src/main/resources/META-INF/arm_at.cfg"));
             t.getPostAccessTransformedJar().set(this.location("atjar.jar"));
         }));
 
@@ -361,5 +360,9 @@ public class CleanroomTasks {
     public String taskName(String taskName) {
         // return this.version.replace('.', '_') + "_" + taskName;
         return taskName;
+    }
+
+    public NamedDomainObjectProvider<Configuration> config() {
+        return cleanroomConfig;
     }
 }
