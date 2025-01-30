@@ -5,6 +5,7 @@ import com.cleanroommc.gradle.api.Meta;
 import com.cleanroommc.gradle.api.lazy.Providers;
 import com.cleanroommc.gradle.api.named.Configurations;
 import com.cleanroommc.gradle.api.named.SourceSets;
+import com.cleanroommc.gradle.api.named.attribute.ObfuscationAttribute;
 import com.cleanroommc.gradle.api.named.dependency.Dependencies;
 import com.cleanroommc.gradle.api.named.task.TaskGroup;
 import com.cleanroommc.gradle.api.named.task.Tasks;
@@ -349,6 +350,11 @@ public class MCPTasks {
             }));
         });
 
+        project.getConfigurations().configureEach(cfg -> {
+            // Use MCP by default for every configuration
+            cfg.getAttributes()
+                    .attribute(ObfuscationAttribute.OBFUSCATION_ATTRIBUTE, ObfuscationAttribute.getMcp(project.getObjects()));
+        });
     }
 
     public String taskName(String taskName) {

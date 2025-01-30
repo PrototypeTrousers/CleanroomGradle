@@ -27,6 +27,7 @@ repositories {
 
 dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'com.google.guava:guava:33.2.1-jre'
     implementation 'commons-io:commons-io:2.15.1'
     implementation 'commons-codec:commons-codec:1.16.0'
     implementation 'io.github.java-diff-utils:java-diff-utils:4.12'
@@ -38,6 +39,7 @@ dependencies {
     implementation 'net.minecraftforge:srgutils:0.5.10'
     implementation 'net.minecraftforge:accesstransformers:8.2.1'
     implementation 'de.siegmar:fastcsv:3.0.0'
+    implementation 'com.opencsv:opencsv:5.10'
     //implementation 'fr.inria.gforge.spoon:spoon-core:10.3.0'
 }
 
