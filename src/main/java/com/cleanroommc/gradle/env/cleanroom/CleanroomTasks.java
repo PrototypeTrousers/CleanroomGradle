@@ -328,7 +328,7 @@ public class CleanroomTasks {
         this.cleanroomminecraft.configure(sources -> {
             Tasks.<JavaCompile>configure(project, sources.getCompileJavaTaskName(), t -> {
                 //TODO add a way to not overwrite the source every compilation
-                t.dependsOn(addCleanroomMinecraftSources);
+                //t.dependsOn(addCleanroomMinecraftSources);
                 t.setGroup(group.getName());
                 t.getJavaCompiler().set(Providers.javaCompiler(project, 21));
                 t.getModularity().getInferModulePath().set(false);
