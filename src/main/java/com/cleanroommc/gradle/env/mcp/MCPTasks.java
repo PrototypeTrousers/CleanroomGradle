@@ -7,6 +7,7 @@ import com.cleanroommc.gradle.api.named.Configurations;
 import com.cleanroommc.gradle.api.named.SourceSets;
 import com.cleanroommc.gradle.api.named.attribute.ObfuscationAttribute;
 import com.cleanroommc.gradle.api.named.dependency.Dependencies;
+import com.cleanroommc.gradle.api.named.extension.CleanroomExtension;
 import com.cleanroommc.gradle.api.named.task.TaskGroup;
 import com.cleanroommc.gradle.api.named.task.Tasks;
 import com.cleanroommc.gradle.api.patch.ApplyDiffs;
@@ -195,9 +196,16 @@ public class MCPTasks {
             t.getMergedJar().set(this.location("merged.jar"));
         }));
 
+        var extDepsAt = group.add(Tasks.with(project, this.taskName("extractDependecyATs"), ExtractDependencyATsTask.class, t ->{
+            t.getDependencies().from(project.getExtensions().getByType(CleanroomExtension.class).config().get());
+            t.getOutputFile().set(this.location("dependency_at.cfg"));
+        }));
+
         this.deobfuscate = group.add(Tasks.with(project, this.taskName(DEOBFUSCATE), Deobfuscate.class, t -> {
+            t.dependsOn(extDepsAt);
             t.getObfuscatedJar().set(this.mergeJars.flatMap(MergeJars::getMergedJar));
             t.getSrgMappingFile().fileProvider(this.srgMapping());
+            t.getAccessTransformerFile().set(extDepsAt.get().getOutputFile());
             t.getDeobfuscatedJar().set(this.location("deobfuscated.jar"));
         }));
 

@@ -20,6 +20,7 @@ import com.cleanroommc.gradle.env.cleanroom.task.AccessTransform;
 import com.cleanroommc.gradle.env.common.task.RunMinecraft;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
 import com.cleanroommc.gradle.env.mcp.task.CleanUp;
+import com.cleanroommc.gradle.env.mcp.task.ExtractDependencyATsTask;
 import com.cleanroommc.gradle.env.mcp.task.FormatSRG;
 import com.cleanroommc.gradle.env.mcp.task.Remap;
 import com.cleanroommc.gradle.env.vanilla.VanillaTasks;
@@ -233,14 +234,28 @@ public class CleanroomTasks {
                                                     System.out.println("File extracted: forge.exc");
                                                 }
                                                 foundFiles++;
-                                                break; // Stop searching inside the .jar once forge.exc is found
+                                            }
+                                            if (jarEntry.getName().equals("forge_at.cfg")) {
+
+                                                // Extract forge_at.cfg file
+                                                try (FileOutputStream outFile = new FileOutputStream(mcpTasks.location("mappings", "forge_at.cfg"))) {
+                                                    while ((len = jarIn.read(buffer)) > 0) {
+                                                        outFile.write(buffer, 0, len);
+                                                    }
+                                                    System.out.println("File extracted: forge_at.cfg");
+                                                }
+                                                foundFiles++;
+                                            }
+                                            jarIn.closeEntry();
+                                            if (foundFiles == 3) {
+                                                break; // Stop if both files are found
                                             }
                                         }
                                     }
                                 }
 
                                 zipIn.closeEntry();
-                                if (foundFiles == 2) {
+                                if (foundFiles == 3) {
                                     break; // Stop if both files are found
                                 }
                             }
@@ -305,17 +320,9 @@ public class CleanroomTasks {
             t.modified(this.location("cleamroommcjar.jar"));
         }));
 
-        var applyAT = group.add(Tasks.with(project, "applymodAT", AccessTransform.class, t ->{
-//            t.dependsOn(patchJar2);
-            t.getPreAccessTransformedJar().set(patchJar2.get().getModifiedPath());
-            //TODO get this path from project
-            t.getAccessFile().set(new File("/mnt/ldata/git/cleanroomarms/src/main/resources/META-INF/arm_at.cfg"));
-            t.getPostAccessTransformedJar().set(this.location("atjar.jar"));
-        }));
-
         this.remapJar2 = group.add(Tasks.with(project, this.taskName(REMAP_JAR2), Remap.class, t -> {
-            t.dependsOn(mcpTasks.extractMcpMappings(), applyAT);
-            t.getSrgJar().set(applyAT.flatMap(AccessTransform::getPostAccessTransformedJar));
+            t.dependsOn(mcpTasks.extractMcpMappings());
+            t.getSrgJar().set(patchJar2.get().getModifiedPath());
             t.getFieldMappings().set(Locations.file(mcpTasks.mcpMappingFolder(), "fields.csv"));
             t.getMethodMappings().set(Locations.file(mcpTasks.mcpMappingFolder(), "methods.csv"));
             t.getParameterMappings().set(Locations.file(mcpTasks.mcpMappingFolder(), "params.csv"));
