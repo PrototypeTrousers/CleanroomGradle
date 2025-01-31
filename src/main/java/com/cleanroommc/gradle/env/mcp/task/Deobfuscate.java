@@ -7,6 +7,8 @@ import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputFile;
 
+import java.io.File;
+
 public abstract class Deobfuscate extends MavenJarExec implements JarTransformer {
 
     @InputFile
@@ -29,13 +31,13 @@ public abstract class Deobfuscate extends MavenJarExec implements JarTransformer
                 "--out-jar", getDeobfuscatedJar(),
                 "--srg-in", getSrgMappingFile(),
                 "--kill-source");
-        this.setup(true);
+        this.setup(false);
     }
 
     @Override
     protected void beforeExec() {
-        if (this.getAccessTransformerFile().isPresent() && this.getAccessTransformerFile().get().getAsFile().exists()) {
-            this.args("--access-transformer", this.getAccessTransformerFile());
+        if (getAccessTransformerFile().isPresent() && getAccessTransformerFile().get().getAsFile().exists()) {
+            args("--access-transformer", getAccessTransformerFile());
         }
     }
 

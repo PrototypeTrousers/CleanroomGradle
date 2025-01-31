@@ -97,6 +97,9 @@ public abstract class CleanroomExtension implements ExtensionAware {
                     cfg.getAttributes().attribute(DEOBFUSCATOR_TRANSFORMED, Boolean.TRUE);
                 }
             });
+            project.getConfigurations().getByName("compileClasspath", cfg -> {
+                cfg.extendsFrom(config.get());
+            });
         });
     }
 
