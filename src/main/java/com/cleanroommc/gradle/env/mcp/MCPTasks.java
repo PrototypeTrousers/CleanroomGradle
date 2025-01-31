@@ -198,7 +198,7 @@ public class MCPTasks {
         }));
 
         this.extDepsAt = group.add(Tasks.with(project, this.taskName("extractDependecyATs"), ExtractDependencyATsTask.class, t -> {
-            t.getDependencies().from(project.getExtensions().getByType(CleanroomExtension.class).config().get());
+            t.getDependencies().from(project.getConfigurations().getByName("compileClasspath"));
             t.getOutputFile().set(this.location("dependency_at.cfg"));
         }));
 
