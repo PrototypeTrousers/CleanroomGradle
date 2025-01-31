@@ -196,7 +196,7 @@ public class MCPTasks {
             t.getMergedJar().set(this.location("merged.jar"));
         }));
 
-        var extDepsAt = group.add(Tasks.with(project, this.taskName("extractDependecyATs"), ExtractDependencyATsTask.class, t ->{
+        var extDepsAt = group.add(Tasks.with(project, this.taskName("extractDependecyATs"), ExtractDependencyATsTask.class, t -> {
             t.getDependencies().from(project.getExtensions().getByType(CleanroomExtension.class).config().get());
             t.getOutputFile().set(this.location("dependency_at.cfg"));
         }));
@@ -205,7 +205,6 @@ public class MCPTasks {
             t.dependsOn(extDepsAt);
             t.getObfuscatedJar().set(this.mergeJars.flatMap(MergeJars::getMergedJar));
             t.getSrgMappingFile().fileProvider(this.srgMapping());
-            t.getAccessTransformerFile().set(extDepsAt.get().getOutputFile());
             t.getDeobfuscatedJar().set(this.location("deobfuscated.jar"));
         }));
 
@@ -283,6 +282,13 @@ public class MCPTasks {
             t.getMethodMappings().set(Locations.file(mcpMappingFolder, "methods.csv"));
             t.getParameterMappings().set(Locations.file(mcpMappingFolder, "params.csv"));
             t.getRemappedJar().set(this.location("remapped.jar"));
+        }));
+
+        var applyATtoSources = group.add(Tasks.with(project, "applyAccessTransformers", ApplySourceAccessTransformersTask.class, t -> {
+            t.dependsOn(remapJar, extDepsAt);
+            t.getInputJar().set(remapJar.flatMap(Remap::getRemappedJar));
+            t.getOutputJar().set(this.location("accessTransformedRemapped.jar"));
+            t.getAccessTransformerFile().set(extDepsAt.flatMap(ExtractDependencyATsTask::getOutputFile));
         }));
 
         var addMinecraftSources = group.add(Tasks.unzip(project, this.taskName(ADD_MINECRAFT_SOURCES),
