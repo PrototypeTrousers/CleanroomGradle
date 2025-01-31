@@ -294,6 +294,7 @@ public class CleanroomTasks {
             t.getVanillaAssetsLocation().set(Locations.build(project, "assets"));
             t.setWorkingDir(Locations.run(project, version, Environment.CLEANROOM, Side.CLIENT));
             t.classpath(this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"));
+            t.classpath(project.file("build/libs/mechanicalarms-1.12.2-1.0.0.jar").toPath());
             t.classpath(mcpTasks.extractClientResources().map(Copy::getDestinationDir));
             t.classpath(mcpTasks.extractServerResources().map(Copy::getDestinationDir));
             t.classpath(cleanroomConfig);
