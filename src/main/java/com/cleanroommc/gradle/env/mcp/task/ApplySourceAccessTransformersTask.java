@@ -37,8 +37,6 @@ public abstract class ApplySourceAccessTransformersTask extends MavenJarExec imp
         super("ApplySourceAccessTransformers", "net.neoforged.jst:jst-cli-bundle:1.0.67");
         this.getMainClass().set("net.neoforged.jst.cli.Main");
         this.jvmArgs("-Xmx4g");
-
-
     }
 
     @Override

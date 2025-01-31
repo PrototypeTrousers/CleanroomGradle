@@ -19,10 +19,7 @@ import com.cleanroommc.gradle.api.types.json.schema.VersionMeta;
 import com.cleanroommc.gradle.env.cleanroom.task.AccessTransform;
 import com.cleanroommc.gradle.env.common.task.RunMinecraft;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
-import com.cleanroommc.gradle.env.mcp.task.CleanUp;
-import com.cleanroommc.gradle.env.mcp.task.ExtractDependencyATsTask;
-import com.cleanroommc.gradle.env.mcp.task.FormatSRG;
-import com.cleanroommc.gradle.env.mcp.task.Remap;
+import com.cleanroommc.gradle.env.mcp.task.*;
 import com.cleanroommc.gradle.env.vanilla.VanillaTasks;
 import net.minecraftforge.fml.relauncher.Side;
 import org.gradle.api.NamedDomainObjectProvider;
@@ -320,9 +317,17 @@ public class CleanroomTasks {
             t.modified(this.location("cleamroommcjar.jar"));
         }));
 
+        var applyATtoSources = group.add(Tasks.with(project, this.taskName("applyAccessTransformerscleanroom"), ApplySourceAccessTransformersTask.class, t -> {
+            t.dependsOn(patchJar2, mcpTasks.extDepsAt());
+            t.getInputJar().set(patchJar2.map(ApplyDiffs::getModifiedPath).get());
+            //t.getInputJar().set(remapJar.flatMap(Remap::getRemappedJar));
+            t.getOutputJar().set(this.location("accessTransformedRemapped.jar"));
+            t.getAccessTransformerFile().set(mcpTasks.extDepsAt().flatMap(ExtractDependencyATsTask::getOutputFile));
+        }));
+
         this.remapJar2 = group.add(Tasks.with(project, this.taskName(REMAP_JAR2), Remap.class, t -> {
-            t.dependsOn(mcpTasks.extractMcpMappings());
-            t.getSrgJar().set(patchJar2.get().getModifiedPath());
+            t.dependsOn(mcpTasks.extractMcpMappings(), applyATtoSources);
+            t.getSrgJar().set(applyATtoSources.flatMap(ApplySourceAccessTransformersTask::getOutputJar));
             t.getFieldMappings().set(Locations.file(mcpTasks.mcpMappingFolder(), "fields.csv"));
             t.getMethodMappings().set(Locations.file(mcpTasks.mcpMappingFolder(), "methods.csv"));
             t.getParameterMappings().set(Locations.file(mcpTasks.mcpMappingFolder(), "params.csv"));
