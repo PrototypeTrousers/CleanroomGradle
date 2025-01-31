@@ -2,7 +2,6 @@ package com.cleanroommc.gradle.env.mcp.task;
 
 import com.cleanroommc.gradle.api.named.task.JarTransformer;
 import com.cleanroommc.gradle.api.named.task.type.MavenJarExec;
-import org.apache.commons.io.FileUtils;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.logging.Logger;
@@ -11,6 +10,7 @@ import org.gradle.api.tasks.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @CacheableTask
 public abstract class ApplySourceAccessTransformersTask extends MavenJarExec implements JarTransformer {
@@ -22,9 +22,9 @@ public abstract class ApplySourceAccessTransformersTask extends MavenJarExec imp
     @OutputFile
     public abstract RegularFileProperty getOutputJar();
 
-    @InputFile
+    @InputFiles
     @PathSensitive(PathSensitivity.NONE)
-    public abstract RegularFileProperty getAccessTransformerFile();
+    public abstract ConfigurableFileCollection getAccessTransformerFiles();
 
     @InputFiles
     @Classpath
@@ -43,7 +43,9 @@ public abstract class ApplySourceAccessTransformersTask extends MavenJarExec imp
     public void exec() {
         this.args(getInputJar(), getOutputJar());
         this.args("--enable-accesstransformers");
-        this.args("--access-transformer", getAccessTransformerFile());
+        for (File f : getAccessTransformerFiles().getFiles()) {
+            this.args("--access-transformer", f.toPath());
+        }
         super.exec();
     }
 

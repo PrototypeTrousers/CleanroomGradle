@@ -16,7 +16,6 @@ import com.cleanroommc.gradle.api.structure.IO;
 import com.cleanroommc.gradle.api.structure.Locations;
 import com.cleanroommc.gradle.api.types.Types;
 import com.cleanroommc.gradle.api.types.json.schema.VersionMeta;
-import com.cleanroommc.gradle.env.cleanroom.task.AccessTransform;
 import com.cleanroommc.gradle.env.common.task.RunMinecraft;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
 import com.cleanroommc.gradle.env.mcp.task.*;
@@ -26,7 +25,6 @@ import org.gradle.api.NamedDomainObjectProvider;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.DuplicatesStrategy;
-import org.gradle.api.file.FileTree;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskProvider;
@@ -322,7 +320,7 @@ public class CleanroomTasks {
             t.getInputJar().set(patchJar2.map(ApplyDiffs::getModifiedPath).get());
             //t.getInputJar().set(remapJar.flatMap(Remap::getRemappedJar));
             t.getOutputJar().set(this.location("accessTransformedRemapped.jar"));
-            t.getAccessTransformerFile().set(mcpTasks.extDepsAt().flatMap(ExtractDependencyATsTask::getOutputFile));
+            t.getAccessTransformerFiles().from(mcpTasks.location("mappings", "forge_at.cfg"), mcpTasks.extDepsAt().flatMap(ExtractDependencyATsTask::getOutputFile));
         }));
 
         this.remapJar2 = group.add(Tasks.with(project, this.taskName(REMAP_JAR2), Remap.class, t -> {

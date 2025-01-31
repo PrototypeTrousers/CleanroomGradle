@@ -7,7 +7,6 @@ import com.cleanroommc.gradle.api.named.Configurations;
 import com.cleanroommc.gradle.api.named.SourceSets;
 import com.cleanroommc.gradle.api.named.attribute.ObfuscationAttribute;
 import com.cleanroommc.gradle.api.named.dependency.Dependencies;
-import com.cleanroommc.gradle.api.named.extension.CleanroomExtension;
 import com.cleanroommc.gradle.api.named.task.TaskGroup;
 import com.cleanroommc.gradle.api.named.task.Tasks;
 import com.cleanroommc.gradle.api.patch.ApplyDiffs;
@@ -281,7 +280,7 @@ public class MCPTasks {
             t.getInputJar().set(patchJar.map(ApplyDiffs::getModifiedPath).get());
             //t.getInputJar().set(remapJar.flatMap(Remap::getRemappedJar));
             t.getOutputJar().set(this.location("accessTransformedRemapped.jar"));
-            t.getAccessTransformerFile().set(extDepsAt.flatMap(ExtractDependencyATsTask::getOutputFile));
+            t.getAccessTransformerFiles().from(this.location("mappings", "forge_at.cfg"), extDepsAt.flatMap(ExtractDependencyATsTask::getOutputFile));
         }));
 
         this.remapJar = group.add(Tasks.with(project, this.taskName(REMAP_JAR), Remap.class, t -> {

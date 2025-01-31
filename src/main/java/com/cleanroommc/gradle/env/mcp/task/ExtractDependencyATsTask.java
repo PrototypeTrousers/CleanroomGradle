@@ -44,6 +44,9 @@ public abstract class ExtractDependencyATsTask extends DefaultTask {
         final Attributes.Name fmlAtName = new Attributes.Name("FMLAT");
 
         for (File dep : deps) {
+            if (!dep.exists()) {
+                continue;
+            }
             if (dep.isDirectory()) {
                 final File metaInf = new File(dep, "META-INF");
                 final File manifestFile = new File(metaInf, "MANIFEST.MF");
