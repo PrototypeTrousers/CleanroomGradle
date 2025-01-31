@@ -36,6 +36,7 @@ public abstract class CleanroomExtension implements ExtensionAware {
 
     private final ConfigurableFileCollection depFilesToDeobf;
     private final SetProperty<String> depModulesToDeobf;
+    public File at;
 
     private NamedDomainObjectProvider<Configuration> config;
 
@@ -141,5 +142,9 @@ public abstract class CleanroomExtension implements ExtensionAware {
 
     public NamedDomainObjectProvider<Configuration> config() {
         return config;
+    }
+
+    public void at(){
+        at = project.file("src/main/resources/META-INF/arm_at.cfg");
     }
 }
