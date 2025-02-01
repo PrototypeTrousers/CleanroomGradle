@@ -261,7 +261,7 @@ public class MCPTasks {
         this.extractMcpMappings = group.add(Tasks.unzipConf(project, this.taskName(EXTRACT_MCP_MAPPINGS), this.mcpMappingConfig, mcpMappingFolder));
 
         this.genSrgMappings = group.add(Tasks.with(this.project, "genSrg", GenSrgMappingsTask.class, t -> {
-            t.dependsOn(this.extractMcpMappings);
+            t.dependsOn(this.extractMcpMappings, this.extractMcpConfig);
             t.getInputSrg().set(srgMapping().get());
             t.getFieldsCsv().set(Locations.file(mcpMappingFolder, "fields.csv"));
             t.getMethodsCsv().set(Locations.file(mcpMappingFolder, "methods.csv"));

@@ -307,8 +307,8 @@ public class CleanroomTasks {
             t.classpath(cleanroomExtension.config());
             t.environment("target", "fmldevclient");
             t.getMainClass().set("com.cleanroommc.boot.MainClient");
-            t.environment( "tweakClass", "net.minecraftforge.fml.common.launcher.FMLTweaker");
-            t.environment( "mainClass", "top.outlands.foundation.boot.Foundation");
+            t.environment("tweakClass", "net.minecraftforge.fml.common.launcher.FMLTweaker");
+            t.environment("mainClass", "top.outlands.foundation.boot.Foundation");
             t.environment("MCP_MAPPINGS", mcpTasks.srgMapping());
             t.environment("MCP_TO_SRG", formatSrg.get().getOutput());
         }));
@@ -363,7 +363,12 @@ public class CleanroomTasks {
         var obfuscate = group.add(Tasks.with(project, this.taskName("cleanroomobfuscate"), Obfuscate.class, t -> {
             t.getDeobfuscatedJar().set(project.getTasks().named("jar").get().getOutputs().getFiles().getSingleFile());
             t.getSrgMappingFile().fileProvider(mcpTasks.genSrgMappings().get().getMcpToNotch().getAsFile());
-            t.getObfuscatedJar().set(project.file("build/libs/" +project.getName() + "obf.jar"));
+            t.getObfuscatedJar().set(project.file("build/libs/" + project.getName() + "obf.jar"));
+            t.classpath(this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"));
+            t.classpath(project.getTasks().named("jar").get().getOutputs().getFiles());
+            t.classpath(cleanroomConfig);
+            t.classpath(cleanroomNativesConfig);
+            t.classpath(cleanroomExtension.config());
         }));
     }
 
