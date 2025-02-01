@@ -54,6 +54,7 @@ public class CleanroomTasks {
     private TaskProvider<RunMinecraft> runClient;
     private TaskProvider<ApplyDiffs> patchJar2;
     private TaskProvider<Remap> remapJar2;
+    private TaskProvider<Jar> minecraftJar;
 
 
     private NamedDomainObjectProvider<SourceSet> cleanroomminecraft;
@@ -160,6 +161,9 @@ public class CleanroomTasks {
                         }
                     }
                 }
+            }
+            if (minecraftJar.get().getArchiveFile().get().getAsFile().exists()) {
+                project.getDependencies().add("implementation", project.files(minecraftJar.get().getArchiveFile().get().getAsFile()));
             }
         });
     }
@@ -294,7 +298,7 @@ public class CleanroomTasks {
             t.getVanillaAssetsLocation().set(Locations.build(project, "assets"));
             t.setWorkingDir(Locations.run(project, version, Environment.CLEANROOM, Side.CLIENT));
             t.classpath(this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"));
-            t.classpath(project.file("build/libs/mechanicalarms-1.12.2-1.0.0.jar").toPath());
+            t.classpath(project.fileTree("build/libs"));
             t.classpath(mcpTasks.extractClientResources().map(Copy::getDestinationDir));
             t.classpath(mcpTasks.extractServerResources().map(Copy::getDestinationDir));
             t.classpath(cleanroomConfig);
@@ -319,9 +323,8 @@ public class CleanroomTasks {
         var applyATtoSources = group.add(Tasks.with(project, this.taskName("applyAccessTransformerscleanroom"), ApplySourceAccessTransformersTask.class, t -> {
             t.dependsOn(patchJar2, mcpTasks.extDepsAt());
             t.getInputJar().set(patchJar2.map(ApplyDiffs::getModifiedPath).get());
-            //t.getInputJar().set(remapJar.flatMap(Remap::getRemappedJar));
-            t.getOutputJar().set(this.location("accessTransformedRemapped.jar"));
-            t.getAccessTransformerFiles().from(cleanroomExtension.at, mcpTasks.location("mappings", "forge_at.cfg"), mcpTasks.extDepsAt().flatMap(ExtractDependencyATsTask::getOutputFile));
+            t.getOutputJar().set(this.location("accessTransformedCleanroomPatched.jar"));
+            t.getAccessTransformerFiles().from(cleanroomExtension.ats, mcpTasks.location("mappings", "forge_at.cfg"), mcpTasks.extDepsAt().flatMap(ExtractDependencyATsTask::getOutputFile));
         }));
 
         this.remapJar2 = group.add(Tasks.with(project, this.taskName(REMAP_JAR2), Remap.class, t -> {
@@ -348,7 +351,7 @@ public class CleanroomTasks {
             Tasks.configure(project, sources.getClassesTaskName(), t -> t.setGroup(group.getName()));
             Tasks.configure(project, sources.getProcessResourcesTaskName(), t -> t.setGroup(group.getName()));
 
-            var minecraftJar = group.add(Tasks.with(project, sources.getJarTaskName(), Jar.class, t -> {
+            minecraftJar = group.add(Tasks.with(project, sources.getJarTaskName(), Jar.class, t -> {
                 t.dependsOn(sources.getClassesTaskName());
                 t.from(Tasks.named(project, sources.getCompileJavaTaskName(), JavaCompile.class).map(JavaCompile::getDestinationDirectory));
                 t.getDestinationDirectory().set(this.location("build", "libs", sources.getName()));
