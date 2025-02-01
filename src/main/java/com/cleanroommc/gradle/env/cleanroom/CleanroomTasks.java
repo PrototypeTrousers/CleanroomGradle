@@ -299,6 +299,7 @@ public class CleanroomTasks {
             t.setWorkingDir(Locations.run(project, version, Environment.CLEANROOM, Side.CLIENT));
             t.classpath(this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"));
             t.classpath(project.fileTree("build/libs"));
+            t.classpath(project.getTasks().named("jar").get().getOutputs().getFiles());
             t.classpath(mcpTasks.extractClientResources().map(Copy::getDestinationDir));
             t.classpath(mcpTasks.extractServerResources().map(Copy::getDestinationDir));
             t.classpath(cleanroomConfig);
@@ -357,8 +358,13 @@ public class CleanroomTasks {
                 t.getDestinationDirectory().set(this.location("build", "libs", sources.getName()));
                 t.getArchiveFileName().set("minecraft-srg-1.12.2.jar");
             }));
-
         });
+
+        var obfuscate = group.add(Tasks.with(project, this.taskName("cleanroomobfuscate"), Obfuscate.class, t -> {
+            t.getDeobfuscatedJar().set(project.getTasks().named("jar").get().getOutputs().getFiles().getSingleFile());
+            t.getSrgMappingFile().fileProvider(mcpTasks.genSrgMappings().get().getMcpToNotch().getAsFile());
+            t.getObfuscatedJar().set(project.file("build/libs/" +project.getName() + "obf.jar"));
+        }));
     }
 
     public TaskProvider<Remap> remapJar2() {return remapJar2;}

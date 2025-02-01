@@ -36,9 +36,8 @@ public abstract class Obfuscate extends MavenJarExec implements JarTransformer {
         this.args("--in-jar", getDeobfuscatedJar(),
                 "--out-jar", getObfuscatedJar(),
                 "--srg-in", getSrgMappingFile(),
-                "--kill-source",
-                "--reverse");
-        this.setup(true);
+                "--kill-source");
+        this.setup(false);
     }
 
     @Override
