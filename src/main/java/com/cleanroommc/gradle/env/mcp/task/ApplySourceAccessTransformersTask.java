@@ -44,7 +44,7 @@ public abstract class ApplySourceAccessTransformersTask extends MavenJarExec imp
         this.args("--enable-accesstransformers");
         for (File f : getAccessTransformerFiles().getFiles()) {
             if (f.exists()) {
-                this.args("--access-transformer", f.toPath());
+                this.args("--access-transformer", patchInvalidAccessTransformer(f).toPath());
             }
         }
         super.exec();
