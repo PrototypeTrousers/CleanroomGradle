@@ -243,15 +243,22 @@ public class MCPTasks {
             t.modified(this.location("patched.jar"));
         }));
 
-        this.cleanup = group.add(Tasks.with(project, "cleanupPatchedJar", CleanUp.class, t -> {
+        var applyForgeAT = group.add(Tasks.with(project, "applyForgeAT", ApplySourceAccessTransformersTask.class, t -> {
             t.dependsOn(patchJar);
-            t.getDirtyJar().set(patchJar.get().getModifiedPath());
-            t.getCleanJar().set(this.location("cleanedupjar.jar"));
+            t.getInputJar().set(patchJar.map(ApplyDiffs::getModifiedPath).get());
+            t.getOutputJar().set(this.location("srgPatchedForgeAT.jar"));
+            t.getAccessTransformerFiles().from(this.location("mappings", "forge_at.cfg"));
+        }));
+
+        this.cleanup = group.add(Tasks.with(project, "cleanupPatchedJar", CleanUp.class, t -> {
+            t.dependsOn(applyForgeAT);
+            t.getDirtyJar().set(applyForgeAT.flatMap(ApplySourceAccessTransformersTask::getOutputJar));
+            t.getCleanJar().set(this.location("cleanedupsrgPatchedForgeAT.jar"));
         }));
 
         var genDiffs = group.add(Tasks.with(project, "generateDiffs", GenerateDiffs.class, t -> {
             t.dependsOn(cleanup);
-            t.source(this.location("cleanedupjar.jar"));
+            t.source(this.location("cleanedupsrgPatchedForgeAT.jar"));
             t.modified(this.location("modified.jar"));
             t.output(this.location("patchies"));
         }));
@@ -275,17 +282,9 @@ public class MCPTasks {
             t.getMcpExc().set(Locations.file(mcpMappingFolder, "mcp.exc"));
         }));
 
-        var applyATtoSources = group.add(Tasks.with(project, "applyAccessTransformers", ApplySourceAccessTransformersTask.class, t -> {
-            t.dependsOn(patchJar, extDepsAt);
-            t.getInputJar().set(patchJar.map(ApplyDiffs::getModifiedPath).get());
-            //t.getInputJar().set(remapJar.flatMap(Remap::getRemappedJar));
-            t.getOutputJar().set(this.location("accessTransformedRemapped.jar"));
-            t.getAccessTransformerFiles().from(this.location("mappings", "forge_at.cfg"), extDepsAt.flatMap(ExtractDependencyATsTask::getOutputFile));
-        }));
-
         this.remapJar = group.add(Tasks.with(project, this.taskName(REMAP_JAR), Remap.class, t -> {
-            t.dependsOn(this.extractMcpMappings, applyATtoSources);
-            t.getSrgJar().set(applyATtoSources.flatMap(ApplySourceAccessTransformersTask::getOutputJar));
+            t.dependsOn(this.extractMcpMappings, this.cleanup);
+            t.getSrgJar().set(this.cleanup.flatMap(CleanUp::getCleanJar));
             t.getFieldMappings().set(Locations.file(mcpMappingFolder, "fields.csv"));
             t.getMethodMappings().set(Locations.file(mcpMappingFolder, "methods.csv"));
             t.getParameterMappings().set(Locations.file(mcpMappingFolder, "params.csv"));

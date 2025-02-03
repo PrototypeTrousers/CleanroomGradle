@@ -325,7 +325,7 @@ public class CleanroomTasks {
             t.dependsOn(patchJar2, mcpTasks.extDepsAt());
             t.getInputJar().set(patchJar2.map(ApplyDiffs::getModifiedPath).get());
             t.getOutputJar().set(this.location("accessTransformedCleanroomPatched.jar"));
-            t.getAccessTransformerFiles().from(cleanroomExtension.ats, mcpTasks.location("mappings", "forge_at.cfg"), mcpTasks.extDepsAt().flatMap(ExtractDependencyATsTask::getOutputFile));
+            t.getAccessTransformerFiles().from(cleanroomExtension.ats, mcpTasks.extDepsAt().flatMap(ExtractDependencyATsTask::getOutputFile));
         }));
 
         this.remapJar2 = group.add(Tasks.with(project, this.taskName(REMAP_JAR2), Remap.class, t -> {
