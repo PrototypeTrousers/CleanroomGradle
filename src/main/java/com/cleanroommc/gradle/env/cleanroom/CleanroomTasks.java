@@ -286,6 +286,7 @@ public class CleanroomTasks {
         }));
 
         var formatSrg = group.add(Tasks.with(this.project, "formatSrg", FormatSRG.class, t -> {
+            t.dependsOn(mcpTasks.genSrgMappings());
             t.getSrg().set(mcpTasks.genSrgMappings().get().getSrgToMcp());
         }));
 
@@ -363,7 +364,9 @@ public class CleanroomTasks {
         var obfuscate = group.add(Tasks.with(project, this.taskName("cleanroomobfuscate"), Obfuscate.class, t -> {
             t.getDeobfuscatedJar().set(project.getTasks().named("jar").get().getOutputs().getFiles().getSingleFile());
             t.getSrgMappingFile().fileProvider(mcpTasks.genSrgMappings().get().getMcpToNotch().getAsFile());
-            t.getObfuscatedJar().set(project.file("build/libs/" + project.getName() + "obf.jar"));
+            String outJar = project.getTasks().named("jar").get().getOutputs().getFiles().getSingleFile().getName();
+            outJar = outJar.substring(0, outJar.length() - 4);
+            t.getObfuscatedJar().set(project.file("build/libs/" +  outJar + "-obf.jar"));
             t.classpath(this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"));
             t.classpath(project.getTasks().named("jar").get().getOutputs().getFiles());
             t.classpath(cleanroomConfig);

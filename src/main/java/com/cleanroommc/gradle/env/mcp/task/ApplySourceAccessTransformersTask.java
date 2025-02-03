@@ -10,7 +10,6 @@ import org.gradle.api.tasks.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @CacheableTask
 public abstract class ApplySourceAccessTransformersTask extends MavenJarExec implements JarTransformer {

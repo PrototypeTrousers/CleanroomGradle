@@ -202,7 +202,7 @@ public class MCPTasks {
         }));
 
         this.deobfuscate = group.add(Tasks.with(project, this.taskName(DEOBFUSCATE), Deobfuscate.class, t -> {
-            t.dependsOn(extDepsAt);
+            t.dependsOn(this.extDepsAt);
             t.getObfuscatedJar().set(this.mergeJars.flatMap(MergeJars::getMergedJar));
             t.getSrgMappingFile().fileProvider(this.srgMapping());
             t.getDeobfuscatedJar().set(this.location("deobfuscated.jar"));
@@ -215,6 +215,7 @@ public class MCPTasks {
         }));
 
         this.polishDeobfuscatedJar = group.add(Tasks.with(project, this.taskName(POLISH_DEOBFUSCATED_JAR), PolishDeobfuscation.class, t -> {
+            t.dependsOn(this.deobfuscate, this.extractMcpConfig);
             t.getDeobfuscatedJar().set(this.deobfuscate.flatMap(Deobfuscate::getDeobfuscatedJar));
             t.getAccessFile().fileProvider(this.extractMcpConfig.map(Copy::getDestinationDir).map(f -> Locations.file(f, "config", "access.txt")));
             t.getConstructorsFile().fileProvider(this.extractMcpConfig.map(Copy::getDestinationDir).map(f -> Locations.file(f, "config", "constructors.txt")));
