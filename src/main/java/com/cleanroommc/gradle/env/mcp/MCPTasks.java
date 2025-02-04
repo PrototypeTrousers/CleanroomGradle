@@ -257,10 +257,15 @@ public class MCPTasks {
             t.getCleanJar().set(this.location("cleanedupsrgPatchedForgeAT.jar"));
         }));
 
+        var cleanupModified = group.add(Tasks.with(project, "cleanupModified", CleanUp.class, t -> {
+            t.getDirtyJar().set(this.location("modified.jar"));
+            t.getCleanJar().set(this.location("cleanupModified.jar"));
+        }));
+
         var genDiffs = group.add(Tasks.with(project, "generateDiffs", GenerateDiffs.class, t -> {
             t.dependsOn(cleanup);
             t.source(this.location("cleanedupsrgPatchedForgeAT.jar"));
-            t.modified(this.location("modified.jar"));
+            t.modified(this.location("cleanupModified.jar"));
             t.output(this.location("patchies"));
         }));
 
