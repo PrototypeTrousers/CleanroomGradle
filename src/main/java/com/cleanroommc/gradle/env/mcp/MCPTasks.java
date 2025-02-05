@@ -413,4 +413,8 @@ public class MCPTasks {
     public TaskProvider<ExtractDependencyATsTask> extDepsAt() {
         return extDepsAt;
     }
+
+    public TaskProvider<DefaultTask> extractSrgPatches() {
+        return extractSrgPatches;
+    }
 }

@@ -63,6 +63,7 @@ public abstract class Obfuscate extends MavenJarExec implements JarTransformer {
                     }
                 }
             }
+            writer.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
