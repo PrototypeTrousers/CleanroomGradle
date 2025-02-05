@@ -402,7 +402,7 @@ public class MCPTasks {
         return cleanup;
     }
 
-    public Object extractMcpMappings() {
+    public TaskProvider<Copy> extractMcpMappings() {
         return extractMcpMappings;
     }
 

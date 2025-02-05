@@ -21,6 +21,13 @@ repositories {
             includeGroup 'net.minecraftforge'
         }
     }
+    maven {
+        name = "paper"
+        url = uri("https://repo.papermc.io/repository/maven-public/")
+        mavenContent {
+            includeGroup("org.cadixdev")
+        }
+    }
     mavenCentral()
     gradlePluginPortal()
 }
@@ -40,6 +47,8 @@ dependencies {
     implementation 'net.minecraftforge:accesstransformers:8.2.1'
     implementation 'de.siegmar:fastcsv:3.0.0'
     implementation 'com.opencsv:opencsv:5.10'
+    implementation("org.cadixdev:mercury:0.1.2-paperweight-SNAPSHOT")
+    implementation 'org.cadixdev:lorenz:0.5.7'
     //implementation 'fr.inria.gforge.spoon:spoon-core:10.3.0'
 }
 

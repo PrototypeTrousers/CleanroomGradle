@@ -16,6 +16,7 @@ import com.cleanroommc.gradle.api.structure.IO;
 import com.cleanroommc.gradle.api.structure.Locations;
 import com.cleanroommc.gradle.api.types.Types;
 import com.cleanroommc.gradle.api.types.json.schema.VersionMeta;
+import com.cleanroommc.gradle.env.cleanroom.task.SourceRemapTask;
 import com.cleanroommc.gradle.env.common.task.Decompile;
 import com.cleanroommc.gradle.env.common.task.RunMinecraft;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
@@ -370,7 +371,7 @@ public class CleanroomTasks {
             t.getSrgMappingFile().fileProvider(mcpTasks.genSrgMappings().map(GenSrgMappingsTask::getMcpToNotch).map(Provider::get).map(RegularFile::getAsFile));
             String outJar = project.getTasks().named("jar", Jar.class).map(Jar::getArchiveFile).map(Provider::get).map(RegularFile::getAsFile).map(File::getName).get();
             outJar = outJar.substring(0, outJar.length() - 4);
-            t.getObfuscatedJar().set(project.file("build/libs/" +  outJar + "-obf.jar"));
+            t.getObfuscatedJar().set(project.file("build/libs/" + outJar + "-obf.jar"));
             t.classpath(this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"));
             t.classpath(project.getTasks().named("jar").get().getOutputs().getFiles());
             t.classpath(cleanroomConfig);
@@ -378,56 +379,18 @@ public class CleanroomTasks {
             t.classpath(cleanroomExtension.config());
         }));
 
-        var remapCompiledCleanroomMCtoSrg = group.add(Tasks.with(project, this.taskName("remapCompiledCleanroomMCtoSrg"), Obfuscate.class, t -> {
-            t.dependsOn(mcpTasks.genSrgMappings());
-            t.getDeobfuscatedJar().set(this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"));
-            t.getSrgMappingFile().fileProvider(mcpTasks.genSrgMappings().map(GenSrgMappingsTask::getMcpToSrg).map(Provider::get).map(RegularFile::getAsFile));
-            String outJar = this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar").getName();
-            t.getObfuscatedJar().set(this.location("remappedCompiledCleanroomMCtoSrg.jar"));
-            t.classpath(this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"));
-            //t.classpath(minecraftJar.map(Jar::getArchiveFile));
-            t.classpath(project.getTasks().named("jar").get().getOutputs().getFiles());
-            t.classpath(cleanroomConfig);
-            t.classpath(cleanroomNativesConfig);
-            t.classpath(cleanroomExtension.config());
-        }));
-
-        var polishDeobfuscatedJar = group.add(Tasks.with(project, this.taskName("POLISH_DEOBFUSCATED_JAR"), PolishDeobfuscation.class, t -> {
-            t.dependsOn(mcpTasks.extractMcpConfig());
-            t.getDeobfuscatedJar().set(remapCompiledCleanroomMCtoSrg.flatMap(Obfuscate::getObfuscatedJar));
-            t.getAccessFile().fileProvider(mcpTasks.extractMcpConfig().map(Copy::getDestinationDir).map(f -> Locations.file(f, "config", "access.txt")));
-            t.getConstructorsFile().fileProvider(mcpTasks.extractMcpConfig().map(Copy::getDestinationDir).map(f -> Locations.file(f, "config", "constructors.txt")));
-            t.getExceptionsFile().fileProvider(mcpTasks.extractMcpConfig().map(Copy::getDestinationDir).map(f -> Locations.file(f, "config", "exceptions.txt")));
-            t.getPolishedJar().set(this.location("polished_deobfuscated.jar"));
-        }));
-
-        var decompile = group.add(Tasks.with(project, this.taskName("DECOMPILE2"), Decompile.class, t -> {
-            t.getCompiledJar().set(polishDeobfuscatedJar.flatMap(PolishDeobfuscation::getPolishedJar));
-            t.getLibraries().from(this.vanillaTasks.vanillaConfig());
-            t.args("-nls=1", "-asc=1", "-iec=1", "-jvn=1", "-ind=    ");
-            t.getDecompiledJar().set(this.location("decompiled.jar"));
-            t.getLogFile().set(Locations.temp(project, "decompile.log"));
-        }));
-
-        var patchJar = group.add(Tasks.with(project, this.taskName("PATCH_JAR2"), ApplyDiffs.class, t -> {
-            t.dependsOn(mcpTasks.extractSrgPatches(), decompile);
-            t.getCopyOverSource().set(true);
-            t.source(decompile.flatMap(Decompile::getDecompiledJar));
-            t.patch(mcpTasks.location("patches", "srg.zip"));
-            t.modified(this.location("patched.jar"));
-        }));
-
-        var applyForgeAT = group.add(Tasks.with(project, "applyForgeAT2", ApplySourceAccessTransformersTask.class, t -> {
-            t.dependsOn(patchJar);
-            t.getInputJar().set(patchJar.map(ApplyDiffs::getModifiedPath).get());
-            t.getOutputJar().set(this.location("srgPatchedForgeAT.jar"));
-            t.getAccessTransformerFiles().from(mcpTasks.location("mappings", "forge_at.cfg"));
-        }));
-
-        var cleanup = group.add(Tasks.with(project, "cleanupPatchedJar2", CleanUp.class, t -> {
-            t.dependsOn(applyForgeAT);
-            t.getDirtyJar().set(applyForgeAT.flatMap(ApplySourceAccessTransformersTask::getOutputJar));
-            t.getCleanJar().set(this.location("cleanedupsrgPatchedForgeAT2.jar"));
+        var sr = group.add(Tasks.with(project, "remapAddedSourcesToSrg", SourceRemapTask.class, t -> {
+            //t.dependsOn(addCleanroomMinecraftSources);
+            t.dependsOn(mcpTasks.extractMcpMappings());
+            t.getSrcFolder().fileProvider(addCleanroomMinecraftSources.map(Copy::getDestinationDir));
+            t.getRemappedFolder().set(this.location("rerererer"));
+            t.getSrg().set(mcpTasks.genSrgMappings().map(GenSrgMappingsTask::getMcpToSrg).map(Provider::get).map(RegularFile::getAsFile).get());
+            t.getParamsCsv().set(mcpTasks.location("mappings", "mcp", "stable", "39", "fields.csv"));
+            t.getClasspasthFiles().from(
+                    this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"),
+                    cleanroomConfig,
+                    cleanroomNativesConfig,
+                    cleanroomExtension.config());
         }));
 
 
