@@ -25,6 +25,8 @@ import org.gradle.api.NamedDomainObjectProvider;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.DuplicatesStrategy;
+import org.gradle.api.file.RegularFile;
+import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskProvider;
@@ -361,9 +363,10 @@ public class CleanroomTasks {
         });
 
         var obfuscate = group.add(Tasks.with(project, this.taskName("cleanroomobfuscate"), Obfuscate.class, t -> {
-            t.getDeobfuscatedJar().set(project.getTasks().named("jar").get().getOutputs().getFiles().getSingleFile());
+            t.dependsOn(mcpTasks.genSrgMappings(), project.getTasks().named("jar", Jar.class));
+            t.getDeobfuscatedJar().set(project.getTasks().named("jar", Jar.class).map(Jar::getArchiveFile).map(Provider::get));
             t.getSrgMappingFile().fileProvider(mcpTasks.genSrgMappings().get().getMcpToNotch().getAsFile());
-            String outJar = project.getTasks().named("jar").get().getOutputs().getFiles().getSingleFile().getName();
+            String outJar = project.getTasks().named("jar", Jar.class).map(Jar::getArchiveFile).map(Provider::get).map(RegularFile::getAsFile).map(File::getName).get();
             outJar = outJar.substring(0, outJar.length() - 4);
             t.getObfuscatedJar().set(project.file("build/libs/" +  outJar + "-obf.jar"));
             t.classpath(this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"));

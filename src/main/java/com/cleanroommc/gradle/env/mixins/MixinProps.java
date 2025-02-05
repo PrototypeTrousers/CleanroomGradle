@@ -1,5 +1,6 @@
 package com.cleanroommc.gradle.env.mixins;
 
+import com.cleanroommc.gradle.env.mcp.MCPTasks;
 import com.cleanroommc.gradle.env.mcp.task.Obfuscate;
 import org.apache.commons.io.FileUtils;
 import org.gradle.api.Project;
@@ -14,6 +15,7 @@ import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.compile.JavaCompile;
+import org.gradle.language.jvm.tasks.ProcessResources;
 
 import java.io.File;
 import java.util.List;
@@ -24,7 +26,7 @@ public class MixinProps {
     /** The source set to enable mixin processing on, defaults to main. */
     public final Property<SourceSet> mixinSourceSet;
 
-    public MixinProps(Project project) {
+    public MixinProps(Project project, MCPTasks mcpTasks) {
         this.project = project;
         this.mixinSourceSet = project.getObjects().property(SourceSet.class);
         final SourceSetContainer sourceSets = project.getExtensions().getByType(JavaPluginExtension.class)
@@ -37,25 +39,26 @@ public class MixinProps {
 
         project.afterEvaluate(_p -> {
             if (this.mixinRefMap.isPresent()) {
-                File tempMixinDir = FileUtils
-                        .getFile(project.getLayout().getBuildDirectory().get().getAsFile(), "tmp", "mixins");
-                File mixinSrg = new File(tempMixinDir, "mixins.srg");
-                File mixinRefMapFile = new File(tempMixinDir, this.mixinRefMap.get());
-                TaskProvider<Obfuscate> reobfJarTask = project.getTasks()
-                        .named("obfuscate", Obfuscate.class);
-                reobfJarTask.configure(task -> task.getExtraSrgFiles().from(mixinSrg));
-                final SourceSet mixinSourceSet = this.mixinSourceSet.get();
-                project.getTasks().named(mixinSourceSet.getCompileJavaTaskName(), JavaCompile.class).configure(task -> {
-                    task.doFirst("createTempMixinDirectory", _t -> tempMixinDir.mkdirs());
-                    ListProperty<String> reobfSrgFile = project.getObjects().listProperty(String.class);
-                    reobfSrgFile.add(
-                            reobfJarTask.map(Obfuscate::getDeobfuscatedJar).map(RegularFileProperty::get)
-                                    .map(RegularFile::getAsFile).map(f -> "-AreobfSrgFile=" + f));
-                    task.getOptions().getCompilerArgumentProviders().add(reobfSrgFile::get);
-                    List<String> compilerArgs = task.getOptions().getCompilerArgs();
-                    compilerArgs.add("-AoutSrgFile=" + mixinSrg);
-                    compilerArgs.add("-AoutRefMapFile=" + mixinRefMapFile);
-                });
+                    File tempMixinDir = FileUtils
+                            .getFile(project.getLayout().getBuildDirectory().get().getAsFile(), "tmp", "mixins");
+                    File mixinSrg = new File(tempMixinDir, "mixins.srg");
+                    File mixinRefMapFile = new File(tempMixinDir, this.mixinRefMap.get());
+                    TaskProvider<Obfuscate> reobfJarTask = project.getTasks()
+                            .named("cleanroomobfuscate", Obfuscate.class);
+                    reobfJarTask.configure(task -> task.getExtraSrgFiles().from(mixinSrg));
+                    final SourceSet mixinSourceSet = this.mixinSourceSet.get();
+                    project.getTasks().named(mixinSourceSet.getCompileJavaTaskName(), JavaCompile.class).configure(task -> {
+                        task.doFirst("createTempMixinDirectory", _t -> tempMixinDir.mkdirs());
+                        task.dependsOn(mcpTasks.genSrgMappings());
+                        ListProperty<String> reobfSrgFile = project.getObjects().listProperty(String.class);
+                        reobfSrgFile.add(
+                                reobfJarTask.map(Obfuscate::getSrgMappingFile).map(RegularFileProperty::get)
+                                        .map(RegularFile::getAsFile).map(f -> "-AreobfSrgFile=" + f));
+                        task.getOptions().getCompilerArgumentProviders().add(reobfSrgFile::get);
+                        List<String> compilerArgs = task.getOptions().getCompilerArgs();
+                        compilerArgs.add("-AoutSrgFile=" + mixinSrg);
+                        compilerArgs.add("-AoutRefMapFile=" + mixinRefMapFile);
+                    });
                 // Keep as class instead of lambda to ensure it works even if the plugin is not loaded into the
                 // classpath
                 // noinspection rawtypes
@@ -81,17 +84,17 @@ public class MixinProps {
 //                                task -> { task.doFirst("createTempMixinDirectory", _t -> tempMixinDir.mkdirs()); });
 //                    }
 //                });
-//                project.getTasks().named(mixinSourceSet.getProcessResourcesTaskName(), ProcessResources.class)
-//                        .configure(task -> {
-//                            task.from(mixinRefMapFile);
-//                            final String compileJava = mixinSourceSet.getCompileJavaTaskName();
-//                            task.dependsOn(compileJava);
+                project.getTasks().named(mixinSourceSet.getProcessResourcesTaskName(), ProcessResources.class)
+                        .configure(task -> {
+                            task.from(mixinRefMapFile);
+                            final String compileJava = mixinSourceSet.getCompileJavaTaskName();
+                            task.dependsOn(compileJava);
 //                            final String compileScala = StringUtils.removeEnd(compileJava, "Java") + "Scala";
 //                            final String compileKotlin = StringUtils.removeEnd(compileJava, "Java") + "Kotlin";
 //                            project.getPlugins().withType(ScalaPlugin.class, scp -> { task.dependsOn(compileScala); });
 //                            project.getPlugins()
 //                                    .withId("org.jetbrains.kotlin.jvm", p -> { task.dependsOn(compileKotlin); });
-//                        });
+                        });
             }
         });
     }

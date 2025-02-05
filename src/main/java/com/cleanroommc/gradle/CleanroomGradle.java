@@ -31,7 +31,7 @@ public class CleanroomGradle implements Plugin<Project> {
                 mcpTasks
         );
         var cleanroomTasks = new CleanroomTasks(project, vanillaTasks, mcpTasks, cleanExtension, "1.12.2");
-        var mixinProps = new MixinProps(project);
+        var mixinProps = new MixinProps(project, mcpTasks);
         project.getExtensions().add("mixinProps", mixinProps);
     }
 }
