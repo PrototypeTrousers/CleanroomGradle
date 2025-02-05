@@ -1,6 +1,7 @@
 package com.cleanroommc.gradle.env.mixins;
 
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
+import com.cleanroommc.gradle.env.mcp.task.GenSrgMappingsTask;
 import com.cleanroommc.gradle.env.mcp.task.Obfuscate;
 import org.apache.commons.io.FileUtils;
 import org.gradle.api.Project;
@@ -45,7 +46,10 @@ public class MixinProps {
                     File mixinRefMapFile = new File(tempMixinDir, this.mixinRefMap.get());
                     TaskProvider<Obfuscate> reobfJarTask = project.getTasks()
                             .named("cleanroomobfuscate", Obfuscate.class);
-                    reobfJarTask.configure(task -> task.getExtraSrgFiles().from(mixinSrg));
+                    reobfJarTask.configure(task -> {
+                        task.getExtraSrgFiles().from(mixinSrg);
+                        task.getSrgMappingFile().set(mcpTasks.genSrgMappings().flatMap(GenSrgMappingsTask::getMcpToSrg));
+                    });
                     final SourceSet mixinSourceSet = this.mixinSourceSet.get();
                     project.getTasks().named(mixinSourceSet.getCompileJavaTaskName(), JavaCompile.class).configure(task -> {
                         task.doFirst("createTempMixinDirectory", _t -> tempMixinDir.mkdirs());
