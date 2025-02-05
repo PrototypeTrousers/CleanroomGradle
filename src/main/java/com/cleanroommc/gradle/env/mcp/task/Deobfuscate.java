@@ -25,20 +25,12 @@ public abstract class Deobfuscate extends MavenJarExec implements JarTransformer
     public abstract RegularFileProperty getDeobfuscatedJar();
 
     public Deobfuscate() {
-        super("deobfuscate", "net.md-5:SpecialSource:1.11.3");
-        this.getMainClass().set("net.md_5.specialsource.SpecialSource");
-        this.args("--in-jar", getObfuscatedJar(),
-                "--out-jar", getDeobfuscatedJar(),
-                "--srg-in", getSrgMappingFile(),
-                "--kill-source");
+        super("deobfuscate", "net.minecraftforge:ForgeAutoRenamingTool:1.1.0");
+        this.getMainClass().set("net.minecraftforge.fart.Main");
+        this.args("--input", getObfuscatedJar(),
+                "--output", getDeobfuscatedJar(),
+                "--map", getSrgMappingFile(),
+                "--src-fix");
         this.setup(false);
     }
-
-    @Override
-    protected void beforeExec() {
-        if (getAccessTransformerFile().isPresent() && getAccessTransformerFile().get().getAsFile().exists()) {
-            args("--access-transformer", getAccessTransformerFile());
-        }
-    }
-
 }
