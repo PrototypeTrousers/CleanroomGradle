@@ -1,12 +1,8 @@
 package com.cleanroommc.gradle.env.cleanroom.task;
 
-import com.cleanroommc.gradle.api.patch.CsvMappingsReader;
-import com.cleanroommc.gradle.utils.Utilities;
+import com.cleanroommc.gradle.api.patch.ModifiedSrgReader;
 import com.google.common.collect.Sets;
 import org.cadixdev.lorenz.MappingSet;
-import org.cadixdev.lorenz.io.MappingFormats;
-import org.cadixdev.lorenz.io.MappingsReader;
-import org.cadixdev.lorenz.io.srg.SrgReader;
 import org.cadixdev.mercury.Mercury;
 import org.cadixdev.mercury.remapper.MercuryRemapper;
 import org.gradle.api.DefaultTask;
@@ -28,7 +24,7 @@ public abstract class SourceRemapTask extends DefaultTask {
 
     @InputFile
     @Optional
-    public abstract RegularFileProperty getParamsCsv();
+    public abstract RegularFileProperty getParamsSrg();
 
     @InputDirectory
     @PathSensitive(PathSensitivity.NONE)
@@ -45,9 +41,8 @@ public abstract class SourceRemapTask extends DefaultTask {
         final Mercury mercury = new Mercury();
 
 
-        mercury.getProcessors().add(MercuryRemapper.create(new SrgReader(Files.newBufferedReader(getSrg().get().getAsFile().toPath(), StandardCharsets.UTF_8)).read(MappingSet.create())));
-        CsvMappingsReader c = new CsvMappingsReader(Files.newBufferedReader(getParamsCsv().get().getAsFile().toPath(), StandardCharsets.UTF_8), true);
-        mercury.getProcessors().add(MercuryRemapper.create(c.read(MappingSet.create())));
+        mercury.getProcessors().add(MercuryRemapper.create(new ModifiedSrgReader(Files.newBufferedReader(getSrg().get().getAsFile().toPath(), StandardCharsets.UTF_8)).read(MappingSet.create())));
+        mercury.getProcessors().add(MercuryRemapper.create(new ModifiedSrgReader(Files.newBufferedReader(getParamsSrg().get().getAsFile().toPath(), StandardCharsets.UTF_8)).read(MappingSet.create())));
 
         Set<File> set = Sets.newHashSet(getProject().getConfigurations().getByName("compileClasspath").getFiles());
         set.addAll(getProject().getConfigurations().getByName("cleanroom1_12_2").getFiles());

@@ -385,7 +385,7 @@ public class CleanroomTasks {
             t.getSrcFolder().fileProvider(addCleanroomMinecraftSources.map(Copy::getDestinationDir));
             t.getRemappedFolder().set(this.location("rerererer"));
             t.getSrg().set(mcpTasks.genSrgMappings().map(GenSrgMappingsTask::getMcpToSrg).map(Provider::get).map(RegularFile::getAsFile).get());
-            t.getParamsCsv().set(mcpTasks.location("mappings", "mcp", "stable", "39", "fields.csv"));
+            t.getParamsSrg().set(mcpTasks.genSrgMappings().map(GenSrgMappingsTask::getMcpToSrgParams).map(Provider::get).map(RegularFile::getAsFile).get());
             t.getClasspasthFiles().from(
                     this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"),
                     cleanroomConfig,
