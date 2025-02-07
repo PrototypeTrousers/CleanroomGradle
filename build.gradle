@@ -3,19 +3,18 @@ plugins {
     // id 'groovy'
     id 'idea'
     id 'java-gradle-plugin'
-    id 'com.diffplug.spotless' version '6.23.3'
     id 'maven-publish'
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
-group 'com.cleanroommc'
-version '0.0.1'
+group = 'com.cleanroommc'
+version = '0.0.1'
 
 repositories {
     maven {
-        name 'MinecraftForge'
-        url "https://maven.minecraftforge.net/"
+        name = 'MinecraftForge'
+        url = "https://maven.minecraftforge.net/"
         mavenContent {
             includeGroup 'de.oceanlabs.mcp'
             includeGroup 'net.minecraftforge'
@@ -49,6 +48,7 @@ dependencies {
     implementation 'com.opencsv:opencsv:5.10'
     implementation("org.cadixdev:mercury:0.1.2-paperweight-SNAPSHOT")
     implementation 'org.cadixdev:lorenz:0.5.7'
+    implementation 'com.github.javaparser:javaparser-symbol-solver-core:3.17.0'
     //implementation 'fr.inria.gforge.spoon:spoon-core:10.3.0'
 }
 
