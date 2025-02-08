@@ -4,13 +4,12 @@ import com.cleanroommc.gradle.api.patch.ModifiedSrgReader;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.NameExpr;
-import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.PrimitiveType;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.printer.lexicalpreservation.LexicalPreservingPrinter;
+import com.github.javaparser.resolution.declarations.ResolvedReferenceTypeDeclaration;
 import com.github.javaparser.resolution.types.ResolvedType;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade;
@@ -39,15 +38,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public abstract class SourceRemapTask extends DefaultTask {
 
-    static Pattern FUNC_ID = Pattern.compile("_(i|\\d+)_");
+    static Pattern FUNC_ID = Pattern.compile("_(i?\\d+)_");
     static Pattern DIAMOND = Pattern.compile("(<.+>)");
 
     @InputFile
@@ -78,10 +78,7 @@ public abstract class SourceRemapTask extends DefaultTask {
     public void remapSources() throws Exception {
 
         final Mercury mercury = new Mercury();
-
-
         mercury.getProcessors().add(MercuryRemapper.create(new ModifiedSrgReader(Files.newBufferedReader(getSrg().get().getAsFile().toPath(), StandardCharsets.UTF_8)).read(MappingSet.create())));
-        mercury.getProcessors().add(MercuryRemapper.create(new ModifiedSrgReader(Files.newBufferedReader(getParamsSrg().get().getAsFile().toPath(), StandardCharsets.UTF_8)).read(MappingSet.create())));
 
         Set<File> set = Sets.newHashSet(getProject().getConfigurations().getByName("compileClasspath").getFiles());
         set.addAll(getProject().getConfigurations().getByName("cleanroom1_12_2").getFiles());
@@ -93,12 +90,12 @@ public abstract class SourceRemapTask extends DefaultTask {
             getLogger().lifecycle("Adding {} to classpath", dependencies);
         }
         typeSolver.add(new ReflectionTypeSolver());
-        typeSolver.add(new JavaParserTypeSolver(new File("/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/"))); // Resolves Java SDK clasesolves project classes
+        typeSolver.add(new JavaParserTypeSolver(new File("g:/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/"))); // Resolves Java SDK clasesolves project classes
 
         mercury.setGracefulClasspathChecks(true);
         mercury.rewrite(getSrcFolder().get().getAsFile().toPath(), getRemappedFolder().get().getAsFile().toPath());
 
-        String filePath = "/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/mcp_config/20201025_185735/config/constructors.txt"; // Replace with your file path
+        String filePath = "g:/git/cleanroomarms/build/cg/versions/1.12.2/mcp_config/20201025_185735/config/constructors.txt"; // Replace with your file path
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -134,9 +131,9 @@ public abstract class SourceRemapTask extends DefaultTask {
         }
     }
 
-    public void main(String[] args) {
+    public static void main(String[] args) {
         //parse constructors.txt
-        String filePath = "/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/mcp_config/20201025_185735/config/constructors.txt"; // Replace with your file path
+        String filePath = "g:/git/cleanroomarms/build/cg/versions/1.12.2/mcp_config/20201025_185735/config/constructors.txt"; // Replace with your file path
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -155,7 +152,7 @@ public abstract class SourceRemapTask extends DefaultTask {
 
         TypeSolver typeSolver = new CombinedTypeSolver(
                 new ReflectionTypeSolver(), // Resolves Java SDK classes
-                new JavaParserTypeSolver(new File("/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/")) // Resolves project classes
+                new JavaParserTypeSolver(new File("G:/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/")) // Resolves project classes
         );
 
         // Configure JavaParser with SymbolSolver
@@ -163,85 +160,53 @@ public abstract class SourceRemapTask extends DefaultTask {
         JavaParser parser = new JavaParser(config);
 
         try {
-            parseFile(new File("/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/net/minecraft/block/BlockRailBase.java").toPath(),
+            parseFile(new File("G:/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/net/minecraft/block/BlockHopper.java").toPath(),
                     parser, typeSolver);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    void parseFile(Path java, JavaParser parser, TypeSolver typeSolver) throws IOException {
+     static void parseFile(Path java, JavaParser parser, TypeSolver typeSolver) throws IOException {
+         System.out.println("Parsing file? " + java.toString());
 
         CompilationUnit cu = parser.parse(java).getResult().get();
         LexicalPreservingPrinter.setup(cu);
 
         cu.findAll(ConstructorDeclaration.class).forEach(constructor -> {
-// Get the parent class of the constructor
-            java.util.Optional<ClassOrInterfaceDeclaration> parentClass = constructor.getParentNode()
-                    .filter(node -> node instanceof ClassOrInterfaceDeclaration)
-                    .map(node -> (ClassOrInterfaceDeclaration) node);
-            String constructorName = "";
-            String innerParams = "";
-            String enumParams = "";
 
+            String signature = generateBytecodeSignature(constructor, typeSolver);
 
-            if (parentClass.isPresent()) {
-                // Recursively construct the fully qualified name of the class
-                String fullyQualifiedClassName = getFullyQualifiedClassName(parentClass.get());
-                constructorName = fullyQualifiedClassName.replace('.', '/');
-                if (parentClass.get().isInnerClass()) {
-                    java.util.Optional<ClassOrInterfaceDeclaration> outerClass = parentClass.get().getParentNode()
-                            .filter(node -> node instanceof ClassOrInterfaceDeclaration)
-                            .map(node -> (ClassOrInterfaceDeclaration) node);
-                    String innerClass = ('L' + getFullyQualifiedClassName(outerClass.get()) + ';');
-                    innerParams = innerClass.replace('.', '/');
-                }
-            }
+            Integer idinteger = constructorMap.get(signature);
+            if (idinteger == null) {
+                System.out.println("Could not find id for " + signature);
+                System.out.println(java.toString());
+//                    getLogger().lifecycle("Could not find id for {}", signature);
+//                    getLogger().lifecycle(java.toString());
+            } else {
+                int id = idinteger;
 
-            java.util.Optional<EnumDeclaration> p = constructor.getParentNode().filter(node -> node instanceof EnumDeclaration).map(node -> (EnumDeclaration) node);
-            if (p.isPresent()) {
-                enumParams = "Ljava/lang/String;I";
-                String fullyQualifiedClassName = getFullyQualifiedEnumClassName(p.get());
-                constructorName = fullyQualifiedClassName.replace('.', '/');
-            }
+                int paramIdx = 1;
 
-            NodeList<Parameter> pl = constructor.getParameters();
+                for (int i = 0; i < constructor.getParameters().size(); i++) {
+                    Parameter param = constructor.getParameter(i);
 
-            if (pl.isNonEmpty()) {
-                String params = "(" + innerParams + enumParams + constructor.getParameters().stream()
-                        .map(param -> resolveTypeName(param, typeSolver))
-                        .collect(Collectors.joining("")) + ")V";
+                    String newName = "p_" + id + "_" + paramIdx + "_";
 
-                Integer idinteger = constructorMap.get(constructorName + ' ' + params);
-                if (idinteger == null) {
-                    getLogger().lifecycle("Could not find id for {}", constructorName + ' ' + params);
-                    getLogger().lifecycle(java.toString());
-                } else {
-                    int id = idinteger;
-
-                    int paramIdx = 1;
-
-                    for (int i = 0; i < constructor.getParameters().size(); i++) {
-                        Parameter param = constructor.getParameter(i);
-
-                        String oldName = param.getName().asString();
-                        String newName = "p_" + id + "_" + paramIdx + "_";
-                        param.setName(newName); // Rename based on index
-
-
-                        constructor.findAll(NameExpr.class).forEach(nameExpr -> {
-                            if (nameExpr.getNameAsString().equals(oldName)) {
-                                nameExpr.setName(newName);
-                            }
-                        });
-
-                        Type paramType = param.getType();
-                        if (paramType.isPrimitiveType() && paramType.asPrimitiveType().getType() == PrimitiveType.Primitive.DOUBLE) {
-                            paramIdx += 2;
-                            continue;
+                    constructor.findAll(NameExpr.class).forEach(nameExpr -> {
+                        if (nameExpr.equals(param.getNameAsExpression())) {
+                            nameExpr.setName(newName);
                         }
-                        paramIdx++;
+                    });
+
+                    param.setName(newName); // Rename based on index
+
+                    Type paramType = param.getType();
+                    if (paramType.isPrimitiveType() && paramType.asPrimitiveType().getType() == PrimitiveType.Primitive.DOUBLE) {
+                        paramIdx += 2;
+                        continue;
                     }
+                    paramIdx++;
                 }
             }
         });
@@ -263,16 +228,15 @@ public abstract class SourceRemapTask extends DefaultTask {
                 for (int i = 0; i < method.getParameters().size(); i++) {
                     Parameter param = method.getParameter(i);
 
-                    String oldName = param.getName().asString();
                     String newName = "p_" + methodId + "_" + paramIdx + "_";
-                    param.setName(newName); // Rename based on index
-
 
                     method.findAll(NameExpr.class).forEach(nameExpr -> {
-                        if (nameExpr.getNameAsString().equals(oldName)) {
+                        if (nameExpr.equals(param.getNameAsExpression())) {
                             nameExpr.setName(newName);
                         }
                     });
+
+                    param.setName(newName); // Rename based on index
 
                     Type paramType = param.getType();
                     if (paramType.isPrimitiveType() && paramType.asPrimitiveType().getType() == PrimitiveType.Primitive.DOUBLE) {
@@ -288,128 +252,104 @@ public abstract class SourceRemapTask extends DefaultTask {
         Files.write(java, cu.toString().getBytes());
     }
 
-    private static String getFullyQualifiedEnumClassName(EnumDeclaration enumDeclaration) {
-        // Start with the current class name
+    private static String generateBytecodeSignature(ConstructorDeclaration constructor, TypeSolver typeSolver) {
+        // Get the declaring class name
+        String className = constructor.resolve().declaringType().getClassName();
+        String qualifiedClassName = constructor.resolve().declaringType().getQualifiedName();
+        qualifiedClassName = qualifiedClassName.replace(className, className.replace('.','$'));
 
-        // Traverse up the parent nodes to find outer classes
-        java.util.Optional<TypeDeclaration<?>> parentNode = enumDeclaration.getParentNode()
-                .filter(node -> node instanceof TypeDeclaration)
-                .map(node -> (TypeDeclaration<?>) node);
+        List<String> parameterTypes = new ArrayList<>();
 
-        StringBuilder fullyQualifiedName = new StringBuilder();
+        // Check if the constructor belongs to an class
+        java.util.Optional<ClassOrInterfaceDeclaration> parentClass = constructor.getParentNode()
+                .filter(node -> node instanceof ClassOrInterfaceDeclaration)
+                .map(node -> (ClassOrInterfaceDeclaration) node);
 
-        fullyQualifiedName.insert(0, (parentNode.isPresent() ?
-                enumDeclaration.getNameAsString() : enumDeclaration.getFullyQualifiedName().get()));
+        if (parentClass.isPresent()) {
+            boolean isInnerClass = parentClass.get().isInnerClass();
+            boolean isNested = parentClass.get().isNestedType();
+            boolean isStatic = parentClass.get().isStatic();
+            boolean isPrivate = parentClass.get().isPrivate();
+            // Get the resolved parameter types
 
+            if (isNested && isStatic && isPrivate) {
+                String outerClassType = constructor.resolve().declaringType().asReferenceType().getQualifiedName();
+                outerClassType = outerClassType.substring(0, outerClassType.lastIndexOf('.'));
+                parameterTypes.add("L" + outerClassType.replace('.', '/') + "$1;");
+            }
 
-        while (parentNode.isPresent()) {
-            // Prepend the outer class name and a '$'
-            fullyQualifiedName.insert(0, parentNode.get().getFullyQualifiedName().get()
-                    + "$");
-
-            // Move to the next outer class
-            parentNode = parentNode.get().getParentNode()
-                    .filter(node -> node instanceof TypeDeclaration)
-                    .map(node -> (TypeDeclaration<?>) node);
+            // Add the implicit outer class reference as the first parameter for inner classes
+            if (isInnerClass) {
+                String outerClassType = constructor.resolve().declaringType().asReferenceType().getQualifiedName();
+                outerClassType = outerClassType.substring(0, outerClassType.lastIndexOf('.')); // Get the outer class
+                parameterTypes.add("L" + outerClassType.replace('.', '/') + ";");
+            }
         }
 
-        return fullyQualifiedName.toString();
+        // Check if the constructor belongs to an enumClass
+        java.util.Optional<EnumDeclaration> parentEnumClass = constructor.getParentNode()
+                .filter(node -> node instanceof EnumDeclaration)
+                .map(node -> (EnumDeclaration) node);
+
+        if (parentEnumClass.isPresent()) {
+            parameterTypes.add("Ljava/lang/String;I");
+        }
+
+        // Add the explicit parameters
+        parameterTypes.addAll(constructor.getParameters().stream()
+                .map(p -> {
+                    Type type = p.getType();
+                    ResolvedType resolvedType = JavaParserFacade.get(typeSolver).getType(p);
+                    return getBytecodeTypeName(resolvedType);
+                })
+                .toList());
+
+        // Combine into a bytecode-like signature
+        String parameters = String.join("", parameterTypes);
+        return qualifiedClassName.replace('.', '/') + ' ' + "(" + parameters + ")V";
     }
 
-    /**
-     * Recursively constructs the fully qualified name of a class, including outer classes.
-     */
-    private static String getFullyQualifiedClassName(ClassOrInterfaceDeclaration classOrInterface) {
-        // Start with the current class name
+    private static String getBytecodeTypeName(ResolvedType resolvedType) {
+        if (resolvedType.isReferenceType()) {
+            // Erase generics by getting the base type
+            ResolvedType baseType = resolvedType.asReferenceType();
+            ResolvedReferenceTypeDeclaration typeDecl = baseType.asReferenceType().getTypeDeclaration().orElseThrow();
+            String className = typeDecl.getClassName();
+            String qualifiedName = typeDecl.getQualifiedName().replace(className, className.replace('.','$'));
 
-        // Traverse up the parent nodes to find outer classes
-        java.util.Optional<TypeDeclaration<?>> parentNode = classOrInterface.getParentNode()
-                .filter(node -> node instanceof TypeDeclaration)
-                .map(node -> (TypeDeclaration<?>) node);
-
-        StringBuilder fullyQualifiedName = new StringBuilder();
-        if (classOrInterface.isInterface()) {
-            fullyQualifiedName.insert(0, classOrInterface.getFullyQualifiedName());
+            // Replace dots with slashes for bytecode format
+            return "L" + qualifiedName.replace('.', '/') + ";";
+        } else if (resolvedType.isPrimitive()) {
+            // Map primitives to their bytecode descriptors
+            return getPrimitiveBytecodeDescriptor(resolvedType.describe());
+        } else if (resolvedType.isArray()) {
+            // Handle arrays recursively
+            return "[" + getBytecodeTypeName(resolvedType.asArrayType().getComponentType());
+        } else if (resolvedType.isTypeVariable()) {
+            if (resolvedType.asTypeParameter().hasLowerBound()) {
+                return getBytecodeTypeName(resolvedType.asTypeParameter().getLowerBound());
+            }
+            else {
+               return  "Ljava/lang/Object;";
+            }
         } else {
-            fullyQualifiedName.insert(0, (parentNode.isPresent() ?
-                    classOrInterface.getNameAsString() : classOrInterface.getFullyQualifiedName().get()));
+            throw new UnsupportedOperationException("Unsupported type: " + resolvedType);
         }
-
-
-        while (parentNode.isPresent()) {
-            // Prepend the outer class name and a '$'
-            fullyQualifiedName.insert(0, parentNode.get().getFullyQualifiedName().get()
-                    + "$");
-
-            // Move to the next outer class
-            parentNode = parentNode.get().getParentNode()
-                    .filter(node -> node instanceof TypeDeclaration)
-                    .map(node -> (TypeDeclaration<?>) node);
-        }
-
-        return fullyQualifiedName.toString();
     }
 
-    private static String resolveTypeName(Parameter param, TypeSolver typeSolver) {
-        if (param.getType() instanceof ClassOrInterfaceType classOrInterfaceType) {
-            String typeName;
-            if (classOrInterfaceType.getName().asString().equals("T")) {
-                ResolvedType o = JavaParserFacade.get(typeSolver).getType(param);
-                typeName = o.asTypeParameter().getBounds().getFirst().getType().describe();
-                return toJVMDescriptor(typeName.replace('.', '/'));
-            } else {
-                typeName = classOrInterfaceType.getNameAsString();
-
-
-                // Check if the type is an inner class
-                if (classOrInterfaceType.getScope().isPresent()) {
-                    String p = JavaParserFacade.get(typeSolver).getType(param).describe();
-                    // If the type is scoped (e.g., Outer.Inner), resolve the scope
-                    String scopeName = classOrInterfaceType.getScope().get().toString();
-                    p = p.replace(scopeName + "." + typeName, scopeName + "$" + typeName);
-                    p = p.replace('.', '/');
-
-                    Matcher diamond = DIAMOND.matcher(p);
-                    if (diamond.find()) {
-                        for (int i = 1; i < diamond.groupCount(); i++) {
-                            p = p.replace(diamond.group(i), "");
-                        }
-                    }
-                    return toJVMDescriptor(p);
-                } else {
-                    // If the type is not scoped, check if it's an inner class of the context class
-                    String p = JavaParserFacade.get(typeSolver).getType(param).describe();
-                    Matcher diamond = DIAMOND.matcher(p);
-                    if (diamond.find()) {
-                        for (int i = 1; i < diamond.groupCount() + 1; i++) {
-                            p = p.replace(diamond.group(i), "");
-                        }
-                    }
-                    return toJVMDescriptor(p.replace('.', '/'));
-                }
-            }
+    private static String getPrimitiveBytecodeDescriptor(String primitiveType) {
+        switch (primitiveType) {
+            case "int": return "I";
+            case "boolean": return "Z";
+            case "byte": return "B";
+            case "char": return "C";
+            case "short": return "S";
+            case "long": return "J";
+            case "float": return "F";
+            case "double": return "D";
+            case "void": return "V";
+            default:
+                throw new IllegalArgumentException("Unknown primitive type: " + primitiveType);
         }
-        // For non-class types (e.g., primitives, arrays), return the type as is
-        return toJVMDescriptor(JavaParserFacade.get(typeSolver).getType(param).describe().replace('.', '/'));
-    }
-
-    private static String toJVMDescriptor(String fullType) {
-        return switch (fullType) {
-            case "byte" -> "B";
-            case "char" -> "C";
-            case "double" -> "D";
-            case "float" -> "F";
-            case "int" -> "I";
-            case "long" -> "J";
-            case "short" -> "S";
-            case "boolean" -> "Z";
-            case "void" -> "V";
-            default -> {
-                if (fullType.endsWith("[]")) {
-                    yield "[" + toJVMDescriptor(fullType.substring(0, fullType.length() - 2));
-                }
-                yield "L" + fullType.replace('.', '/') + ";";
-            }
-        };
     }
 }

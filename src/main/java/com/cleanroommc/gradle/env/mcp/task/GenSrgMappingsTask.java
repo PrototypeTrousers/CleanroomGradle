@@ -12,8 +12,8 @@ import org.gradle.api.tasks.*;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.nio.file.Files;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -24,8 +24,8 @@ import java.util.regex.Pattern;
 @CacheableTask
 public abstract class GenSrgMappingsTask extends DefaultTask {
 
-    Pattern PARAM_CSV_PATTERN = Pattern.compile("_(i|\\d+)_(\\d+)_");
-    Pattern FUNC_ID = Pattern.compile("_(i|\\d+)_");
+    Pattern PARAM_CSV_PATTERN = Pattern.compile("_(i?\\d+)_(\\d+)_");
+    Pattern FUNC_ID = Pattern.compile("_(i?\\d+)_");
 
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
