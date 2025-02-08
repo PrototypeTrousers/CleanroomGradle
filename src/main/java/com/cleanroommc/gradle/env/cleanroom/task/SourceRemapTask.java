@@ -27,6 +27,7 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.*;
+import org.gradle.api.tasks.Optional;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -38,10 +39,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -129,6 +127,13 @@ public abstract class SourceRemapTask extends DefaultTask {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        if (!constructorMap.isEmpty()) {
+            System.out.println( constructorMap.size() + "Unmatched constructors");
+            for ( Map.Entry<String, Integer> entSet : constructorMap.entrySet()) {
+                System.out.println(entSet.getValue() + ':' + entSet.getKey());
+            }
+        }
     }
 
     public static void main(String[] args) {
@@ -160,7 +165,7 @@ public abstract class SourceRemapTask extends DefaultTask {
         JavaParser parser = new JavaParser(config);
 
         try {
-            parseFile(new File("G:/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/net/minecraft/block/BlockHopper.java").toPath(),
+            parseFile(new File("G:/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/net/minecraft/inventory/ClickType.java").toPath(),
                     parser, typeSolver);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -184,6 +189,7 @@ public abstract class SourceRemapTask extends DefaultTask {
 //                    getLogger().lifecycle("Could not find id for {}", signature);
 //                    getLogger().lifecycle(java.toString());
             } else {
+                constructorMap.remove(signature);
                 int id = idinteger;
 
                 int paramIdx = 1;
@@ -269,7 +275,7 @@ public abstract class SourceRemapTask extends DefaultTask {
             boolean isInnerClass = parentClass.get().isInnerClass();
             boolean isNested = parentClass.get().isNestedType();
             boolean isStatic = parentClass.get().isStatic();
-            boolean isPrivate = parentClass.get().isPrivate();
+            boolean isPrivate = constructor.isPrivate();
             // Get the resolved parameter types
 
             if (isNested && isStatic && isPrivate) {
