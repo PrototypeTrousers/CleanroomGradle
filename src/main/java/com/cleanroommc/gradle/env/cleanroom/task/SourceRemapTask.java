@@ -191,7 +191,7 @@ public abstract class SourceRemapTask extends DefaultTask {
                 for (int i = 0; i < constructor.getParameters().size(); i++) {
                     Parameter param = constructor.getParameter(i);
 
-                    String newName = "p_" + id + "_" + paramIdx + "_";
+                    String newName = "p_" + id + "_i" + paramIdx + "_";
 
                     constructor.findAll(NameExpr.class).forEach(nameExpr -> {
                         if (nameExpr.equals(param.getNameAsExpression())) {
@@ -300,7 +300,7 @@ public abstract class SourceRemapTask extends DefaultTask {
                 .map(p -> {
                     Type type = p.getType();
                     ResolvedType resolvedType = JavaParserFacade.get(typeSolver).getType(p);
-                    return getBytecodeTypeName(resolvedType);
+                    return (p.isVarArgs() ? '[' : "") + getBytecodeTypeName(resolvedType);
                 })
                 .toList());
 
