@@ -1,6 +1,9 @@
 package com.cleanroommc.gradle.env.cleanroom.task;
 
 import com.cleanroommc.gradle.api.patch.ModifiedSrgReader;
+import com.github.abrarsyed.jastyle.ASFormatter;
+import com.github.abrarsyed.jastyle.OptParser;
+import com.github.abrarsyed.jastyle.constants.EnumFormatStyle;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
@@ -29,10 +32,7 @@ import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.*;
 import org.gradle.api.tasks.Optional;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -71,6 +71,7 @@ public abstract class SourceRemapTask extends DefaultTask {
     public abstract ConfigurableFileCollection getClasspasthFiles();
 
     static HashMap<String, Integer> constructorMap = new HashMap<>();
+    static final ASFormatter formatter = new ASFormatter();
 
     @TaskAction
     public void remapSources() throws Exception {
@@ -88,12 +89,12 @@ public abstract class SourceRemapTask extends DefaultTask {
             getLogger().lifecycle("Adding {} to classpath", dependencies);
         }
         typeSolver.add(new ReflectionTypeSolver());
-        typeSolver.add(new JavaParserTypeSolver(new File("g:/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/"))); // Resolves Java SDK clasesolves project classes
+        typeSolver.add(new JavaParserTypeSolver(new File("/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/"))); // Resolves Java SDK clasesolves project classes
 
         mercury.setGracefulClasspathChecks(true);
         mercury.rewrite(getSrcFolder().get().getAsFile().toPath(), getRemappedFolder().get().getAsFile().toPath());
 
-        String filePath = "g:/git/cleanroomarms/build/cg/versions/1.12.2/mcp_config/20201025_185735/config/constructors.txt"; // Replace with your file path
+        String filePath = "/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/mcp_config/20201025_185735/config/constructors.txt"; // Replace with your file path
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -113,6 +114,17 @@ public abstract class SourceRemapTask extends DefaultTask {
         // Configure JavaParser with SymbolSolver
         ParserConfiguration config = new ParserConfiguration().setSymbolResolver(new JavaSymbolSolver(typeSolver));
         JavaParser parser = new JavaParser(config);
+
+        formatter.setFormattingStyle(EnumFormatStyle.ALLMAN);
+        formatter.setBreakClosingHeaderBracketsMode(true);
+        formatter.setSwitchIndent(true);
+        formatter.setMaxInStatementIndentLength(40);
+        formatter.setOperatorPaddingMode(true);
+
+        formatter.setParensUnPaddingMode(true);
+        formatter.setBreakBlocksMode(true);
+        formatter.setDeleteEmptyLinesMode(true);
+        formatter.setUseProperInnerClassIndenting(false);
 
         try {
             Files.walkFileTree(getRemappedFolder().getAsFile().get().toPath(), new SimpleFileVisitor<Path>() {
@@ -138,7 +150,7 @@ public abstract class SourceRemapTask extends DefaultTask {
 
     public static void main(String[] args) {
         //parse constructors.txt
-        String filePath = "g:/git/cleanroomarms/build/cg/versions/1.12.2/mcp_config/20201025_185735/config/constructors.txt"; // Replace with your file path
+        String filePath = "/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/mcp_config/20201025_185735/config/constructors.txt"; // Replace with your file path
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -157,15 +169,29 @@ public abstract class SourceRemapTask extends DefaultTask {
 
         TypeSolver typeSolver = new CombinedTypeSolver(
                 new ReflectionTypeSolver(), // Resolves Java SDK classes
-                new JavaParserTypeSolver(new File("G:/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/")) // Resolves project classes
+                new JavaParserTypeSolver(new File("/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/")) // Resolves project classes
         );
 
         // Configure JavaParser with SymbolSolver
-        ParserConfiguration config = new ParserConfiguration().setSymbolResolver(new JavaSymbolSolver(typeSolver));
+        ParserConfiguration config = new ParserConfiguration()
+                .setSymbolResolver(new JavaSymbolSolver(typeSolver))
+                .setLexicalPreservationEnabled(true);
         JavaParser parser = new JavaParser(config);
 
+        formatter.setFormattingStyle(EnumFormatStyle.ALLMAN);
+        formatter.setBreakClosingHeaderBracketsMode(true);
+
+        formatter.setSwitchIndent(true);
+        formatter.setMaxInStatementIndentLength(40);
+        formatter.setOperatorPaddingMode(true);
+
+        formatter.setParensUnPaddingMode(true);
+        formatter.setBreakBlocksMode(true);
+        formatter.setDeleteEmptyLinesMode(true);
+        formatter.setUseProperInnerClassIndenting(false);
+
         try {
-            parseFile(new File("G:/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/net/minecraft/inventory/ClickType.java").toPath(),
+            parseFile(new File("/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/net/minecraft/block/Block.java").toPath(),
                     parser, typeSolver);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -176,7 +202,7 @@ public abstract class SourceRemapTask extends DefaultTask {
          System.out.println("Parsing file? " + java.toString());
 
         CompilationUnit cu = parser.parse(java).getResult().get();
-        LexicalPreservingPrinter.setup(cu);
+        cu = LexicalPreservingPrinter.setup(cu);
 
         cu.findAll(ConstructorDeclaration.class).forEach(constructor -> {
 
@@ -197,7 +223,7 @@ public abstract class SourceRemapTask extends DefaultTask {
                 for (int i = 0; i < constructor.getParameters().size(); i++) {
                     Parameter param = constructor.getParameter(i);
 
-                    String newName = "p_" + id + "_i" + paramIdx + "_";
+                    String newName = "p_i" + id + "_" + paramIdx + "_";
 
                     constructor.findAll(NameExpr.class).forEach(nameExpr -> {
                         if (nameExpr.equals(param.getNameAsExpression())) {
@@ -255,7 +281,11 @@ public abstract class SourceRemapTask extends DefaultTask {
         });
 
         // Write the modified code back to the file
-        Files.write(java, cu.toString().getBytes());
+        StringReader reader = new StringReader(cu.toString());
+        StringWriter writer = new StringWriter();
+        formatter.format(reader, writer);
+        Files.write(java, writer.toString().getBytes());
+
     }
 
     private static String generateBytecodeSignature(ConstructorDeclaration constructor, TypeSolver typeSolver) {
