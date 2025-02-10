@@ -77,7 +77,7 @@ public abstract class SourceRemapTask extends DefaultTask {
     public void remapSources() throws Exception {
 
         final Mercury mercury = new Mercury();
-        mercury.getProcessors().add(MercuryRemapper.create(new ModifiedSrgReader(Files.newBufferedReader(getSrg().get().getAsFile().toPath(), StandardCharsets.UTF_8)).read(MappingSet.create())));
+        mercury.getProcessors().add(MercuryRemapper.create(new ModifiedSrgReader(Files.newBufferedReader(getSrg().get().getAsFile().toPath(), StandardCharsets.UTF_8)).read(MappingSet.create()),false));
 
         Set<File> set = Sets.newHashSet(getProject().getConfigurations().getByName("compileClasspath").getFiles());
         set.addAll(getProject().getConfigurations().getByName("cleanroom1_12_2").getFiles());
