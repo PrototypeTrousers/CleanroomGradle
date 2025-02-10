@@ -72,6 +72,7 @@ public abstract class SourceRemapTask extends DefaultTask {
 
     static HashMap<String, Integer> constructorMap = new HashMap<>();
     static final ASFormatter formatter = new ASFormatter();
+    static int paramOffset;
 
     @TaskAction
     public void remapSources() throws Exception {
@@ -205,9 +206,8 @@ public abstract class SourceRemapTask extends DefaultTask {
         cu = LexicalPreservingPrinter.setup(cu);
 
         cu.findAll(ConstructorDeclaration.class).forEach(constructor -> {
-
+            paramOffset =0;
             String signature = generateBytecodeSignature(constructor, typeSolver);
-
             Integer idinteger = constructorMap.get(signature);
             if (idinteger == null) {
                 System.out.println("Could not find id for " + signature);
@@ -218,7 +218,7 @@ public abstract class SourceRemapTask extends DefaultTask {
                 constructorMap.remove(signature);
                 int id = idinteger;
 
-                int paramIdx = 1;
+                int paramIdx = paramOffset + 1;
 
                 for (int i = 0; i < constructor.getParameters().size(); i++) {
                     Parameter param = constructor.getParameter(i);
@@ -234,9 +234,13 @@ public abstract class SourceRemapTask extends DefaultTask {
                     param.setName(newName); // Rename based on index
 
                     Type paramType = param.getType();
-                    if (paramType.isPrimitiveType() && paramType.asPrimitiveType().getType() == PrimitiveType.Primitive.DOUBLE) {
-                        paramIdx += 2;
-                        continue;
+                    if (paramType.isPrimitiveType()) {
+                        PrimitiveType.Primitive primitiveParamtype = paramType.asPrimitiveType().getType();
+                        if (primitiveParamtype == PrimitiveType.Primitive.DOUBLE ||
+                                primitiveParamtype == PrimitiveType.Primitive.LONG) {
+                            paramIdx += 2;
+                            continue;
+                        }
                     }
                     paramIdx++;
                 }
@@ -271,21 +275,25 @@ public abstract class SourceRemapTask extends DefaultTask {
                     param.setName(newName); // Rename based on index
 
                     Type paramType = param.getType();
-                    if (paramType.isPrimitiveType() && paramType.asPrimitiveType().getType() == PrimitiveType.Primitive.DOUBLE) {
-                        paramIdx += 2;
-                        continue;
+                    if (paramType.isPrimitiveType()) {
+                        PrimitiveType.Primitive primitiveParamtype = paramType.asPrimitiveType().getType();
+                        if (primitiveParamtype == PrimitiveType.Primitive.DOUBLE ||
+                                primitiveParamtype == PrimitiveType.Primitive.LONG) {
+                            paramIdx += 2;
+                            continue;
+                        }
                     }
                     paramIdx++;
                 }
             }
         });
 
-        // Write the modified code back to the file
-        StringReader reader = new StringReader(cu.toString());
-        StringWriter writer = new StringWriter();
-        formatter.format(reader, writer);
-        Files.write(java, writer.toString().getBytes());
-
+//        // Write the modified code back to the file
+//        StringReader reader = new StringReader(LexicalPreservingPrinter.print(cu));
+//        StringWriter writer = new StringWriter();
+//        formatter.format(reader, writer);
+//        Files.write(java, writer.toString().getBytes());
+         Files.write(java, LexicalPreservingPrinter.print(cu).getBytes());
     }
 
     private static String generateBytecodeSignature(ConstructorDeclaration constructor, TypeSolver typeSolver) {
@@ -312,6 +320,7 @@ public abstract class SourceRemapTask extends DefaultTask {
                 String outerClassType = constructor.resolve().declaringType().asReferenceType().getQualifiedName();
                 outerClassType = outerClassType.substring(0, outerClassType.lastIndexOf('.'));
                 parameterTypes.add("L" + outerClassType.replace('.', '/') + "$1;");
+                paramOffset++;
             }
 
             // Add the implicit outer class reference as the first parameter for inner classes
@@ -319,6 +328,7 @@ public abstract class SourceRemapTask extends DefaultTask {
                 String outerClassType = constructor.resolve().declaringType().asReferenceType().getQualifiedName();
                 outerClassType = outerClassType.substring(0, outerClassType.lastIndexOf('.')); // Get the outer class
                 parameterTypes.add("L" + outerClassType.replace('.', '/') + ";");
+                paramOffset++;
             }
         }
 
@@ -329,6 +339,7 @@ public abstract class SourceRemapTask extends DefaultTask {
 
         if (parentEnumClass.isPresent()) {
             parameterTypes.add("Ljava/lang/String;I");
+            paramOffset += 2;
         }
 
         // Add the explicit parameters
