@@ -83,12 +83,14 @@ public abstract class GenSrgMappingsTask extends DefaultTask {
     public void generateMappings() throws IOException {
         // SRG->MCP from the MCP csv files
         HashMap<String, String> methods = new HashMap<>(5000);
+        HashMap<String, String> methodsMcpToSrg = new HashMap<>(5000);
         HashMap<String, String> fields = new HashMap<>(5000);
         HashMap<String , HashMap<Integer, String>> params = new HashMap<>(5000);
 
         try (CsvReader<CsvRecord> csv = CsvReader.builder().ofCsvRecord(getMethodsCsv().get().getAsFile().toPath())) {
             for (final CsvRecord csvRecord : csv) {
                 methods.put(csvRecord.getField(0), csvRecord.getField(1));
+                methodsMcpToSrg.put(csvRecord.getField(1), csvRecord.getField(0));
             }
         }
 
@@ -114,7 +116,7 @@ public abstract class GenSrgMappingsTask extends DefaultTask {
         Map<String, String> excRemap = new HashMap<>(); // Was a bunch of commented out code in ForgeGradle
         // Write outputs
         writeOutSrgs(inSrg, methods, fields, params);
-        writeOutExcs(excRemap, methods);
+        writeOutExcs(excRemap, methodsMcpToSrg);
     }
 
     // Copied straight from ForgeGradle
@@ -283,8 +285,8 @@ public abstract class GenSrgMappingsTask extends DefaultTask {
 
                 for (String line : lines) {
                     // these are in MCP names
-                    srgOut.write(line);
-                    srgOut.newLine();
+                    mcpOut.write(line);
+                    mcpOut.newLine();
 
                     // remap SRG
 
@@ -295,19 +297,19 @@ public abstract class GenSrgMappingsTask extends DefaultTask {
 
                     // not a method? wut?
                     if (sigIndex == -1 || dotIndex == -1) {
-                        mcpOut.write(line);
-                        mcpOut.newLine();
+                        srgOut.write(line);
+                        srgOut.newLine();
                         continue;
                     }
 
                     // get new name
                     String name = split[0].substring(dotIndex + 1, sigIndex);
-                    if (excRemap.containsKey(name)) name = excRemap.get(name);
+                    if (methods.containsKey(name)) name = methods.get(name);
 
                     // write remapped line
-                    mcpOut.write(
-                            split[0].substring(0, dotIndex) + name + split[0].substring(sigIndex) + "=" + split[1]);
-                    mcpOut.newLine();
+                    srgOut.write(
+                            split[0].substring(0, dotIndex) + "." + name + split[0].substring(sigIndex) + "=" + split[1]);
+                    srgOut.newLine();
                 }
             }
         }
