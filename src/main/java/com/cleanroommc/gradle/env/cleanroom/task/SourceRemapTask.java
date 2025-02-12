@@ -1,9 +1,6 @@
 package com.cleanroommc.gradle.env.cleanroom.task;
 
 import com.cleanroommc.gradle.api.patch.ModifiedSrgReader;
-import com.github.abrarsyed.jastyle.ASFormatter;
-import com.github.abrarsyed.jastyle.OptParser;
-import com.github.abrarsyed.jastyle.constants.EnumFormatStyle;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
@@ -29,10 +26,13 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.tasks.*;
 import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.*;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -46,16 +46,11 @@ import java.util.regex.Pattern;
 public abstract class SourceRemapTask extends DefaultTask {
 
     static Pattern FUNC_ID = Pattern.compile("_(i?\\d+)_");
-    static Pattern DIAMOND = Pattern.compile("(<.+>)");
     static Pattern PARAMID = Pattern.compile("(?<=_)i?\\d+(?=_)");
 
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
     public abstract RegularFileProperty getSrg();
-
-    @InputFile
-    @Optional
-    public abstract RegularFileProperty getParamsSrg();
 
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
@@ -73,12 +68,12 @@ public abstract class SourceRemapTask extends DefaultTask {
     public abstract DirectoryProperty getRemappedFolder();
 
     @InputFiles
-    public abstract ConfigurableFileCollection getClasspasthFiles();
+    @Classpath
+    public abstract ConfigurableFileCollection getClasspathFiles();
 
-    static HashMap<String, Integer> constructorMap = new HashMap<>();
-    static HashMap<String, Map<String,String>> paramMap = new HashMap<>();
-    static final ASFormatter formatter = new ASFormatter();
-    static int paramOffset;
+    private final HashMap<String, Integer> constructorMap = new HashMap<>();
+    private final HashMap<String, Map<String,String>> paramMap = new HashMap<>();
+    private int implicitParamOffset;
 
     @TaskAction
     public void remapSources() throws Exception {
@@ -86,24 +81,20 @@ public abstract class SourceRemapTask extends DefaultTask {
         final Mercury mercury = new Mercury();
         mercury.getProcessors().add(MercuryRemapper.create(new ModifiedSrgReader(Files.newBufferedReader(getSrg().get().getAsFile().toPath(), StandardCharsets.UTF_8)).read(MappingSet.create()),false));
 
-        Set<File> set = Sets.newHashSet(getProject().getConfigurations().getByName("compileClasspath").getFiles());
-        set.addAll(getProject().getConfigurations().getByName("cleanroom1_12_2").getFiles());
-        set.addAll(getClasspasthFiles().getFiles());
+        Set<File> set = Sets.newHashSet(getClasspathFiles().getFiles());
         CombinedTypeSolver typeSolver = new CombinedTypeSolver();
         for (File dependencies : set) {
             mercury.getClassPath().add(dependencies.toPath());
             typeSolver.add(new JarTypeSolver(dependencies));
             getLogger().lifecycle("Adding {} to classpath", dependencies);
         }
-        typeSolver.add(new ReflectionTypeSolver());
-        typeSolver.add(new JavaParserTypeSolver(new File("/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/"))); // Resolves Java SDK clasesolves project classes
+        typeSolver.add(new ReflectionTypeSolver()); // Resolves Java SDK classes
+        typeSolver.add(new JavaParserTypeSolver(getSrcFolder().get().getAsFile())); //Resolves project classes
 
         mercury.setGracefulClasspathChecks(true);
         mercury.rewrite(getSrcFolder().get().getAsFile().toPath(), getRemappedFolder().get().getAsFile().toPath());
 
-        String filePath = "/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/mcp_config/20201025_185735/config/constructors.txt"; // Replace with your file path
-
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(getConstructorTxt().getAsFile().get()))) {
             String line;
             while ((line = br.readLine()) != null) {
                 // Split the line into the number and the rest of the string
@@ -135,22 +126,13 @@ public abstract class SourceRemapTask extends DefaultTask {
         }
 
         // Configure JavaParser with SymbolSolver
-        ParserConfiguration config = new ParserConfiguration().setSymbolResolver(new JavaSymbolSolver(typeSolver));
+        ParserConfiguration config = new ParserConfiguration()
+                .setSymbolResolver(new JavaSymbolSolver(typeSolver))
+                .setLexicalPreservationEnabled(true);
         JavaParser parser = new JavaParser(config);
 
-        formatter.setFormattingStyle(EnumFormatStyle.ALLMAN);
-        formatter.setBreakClosingHeaderBracketsMode(true);
-        formatter.setSwitchIndent(true);
-        formatter.setMaxInStatementIndentLength(40);
-        formatter.setOperatorPaddingMode(true);
-
-        formatter.setParensUnPaddingMode(true);
-        formatter.setBreakBlocksMode(true);
-        formatter.setDeleteEmptyLinesMode(true);
-        formatter.setUseProperInnerClassIndenting(false);
-
         try {
-            Files.walkFileTree(getRemappedFolder().getAsFile().get().toPath(), new SimpleFileVisitor<Path>() {
+            Files.walkFileTree(getRemappedFolder().getAsFile().get().toPath(), new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                     if (file.toString().endsWith(".java")) {
@@ -171,94 +153,28 @@ public abstract class SourceRemapTask extends DefaultTask {
         }
     }
 
-    public static void main(String[] args) {
-        //parse constructors.txt
-        String filePath = "/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/mcp_config/20201025_185735/config/constructors.txt"; // Replace with your file path
-
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                // Split the line into the number and the rest of the string
-                String[] parts = line.split(" ", 2); // Split into 2 parts: number and the rest
-                if (parts.length == 2) {
-                    int value = Integer.parseInt(parts[0]);
-                    String key = parts[1];
-                    constructorMap.put(key, value);
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        String paramFilePath = "/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/mcp_config/mappings/mcp/stable/39/params.csv"; // Replace with your file path
-
-        try (BufferedReader br = new BufferedReader(new FileReader(paramFilePath))) {
-            String line;
-            Matcher matcher = PARAMID.matcher("");
-            while ((line = br.readLine()) != null) {
-                // Split the line into the number and the rest of the string
-                String[] parts = line.split(","); // Split into 2 parts: number and the rest
-                matcher.reset(parts[0]);
-                if (matcher.find()) {
-                    paramMap.computeIfAbsent(matcher.group(), k -> new HashMap<>());
-                    paramMap.get(matcher.group()).put(parts[1], parts[0]);
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        TypeSolver typeSolver = new CombinedTypeSolver(
-                new ReflectionTypeSolver(), // Resolves Java SDK classes
-                new JavaParserTypeSolver(new File("/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/")) // Resolves project classes
-        );
-
-        // Configure JavaParser with SymbolSolver
-        ParserConfiguration config = new ParserConfiguration()
-                .setSymbolResolver(new JavaSymbolSolver(typeSolver))
-                .setLexicalPreservationEnabled(true);
-        JavaParser parser = new JavaParser(config);
-
-        formatter.setFormattingStyle(EnumFormatStyle.ALLMAN);
-        formatter.setBreakClosingHeaderBracketsMode(true);
-
-        formatter.setSwitchIndent(true);
-        formatter.setMaxInStatementIndentLength(40);
-        formatter.setOperatorPaddingMode(true);
-
-        formatter.setParensUnPaddingMode(true);
-        formatter.setBreakBlocksMode(true);
-        formatter.setDeleteEmptyLinesMode(true);
-        formatter.setUseProperInnerClassIndenting(false);
-
-        try {
-            parseFile(new File("/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/net/minecraft/client/audio/SoundManager.java").toPath(),
-                    parser, typeSolver);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-     static void parseFile(Path java, JavaParser parser, TypeSolver typeSolver) throws IOException {
+     void parseFile(Path java, JavaParser parser, TypeSolver typeSolver) throws IOException {
          System.out.println("Parsing file? " + java.toString());
 
         CompilationUnit cu = parser.parse(java).getResult().get();
-        cu = LexicalPreservingPrinter.setup(cu);
+        LexicalPreservingPrinter.setup(cu);
 
-        cu.findAll(ConstructorDeclaration.class).forEach(constructor -> {
-            paramOffset =0;
+         cu.findAll(ConstructorDeclaration.class).forEach(constructor -> {
+            implicitParamOffset = 1;
             String signature = generateBytecodeSignature(constructor, typeSolver);
             Integer idinteger = constructorMap.get(signature);
+
             if (idinteger == null) {
-                System.out.println("Could not find id for " + signature);
-                System.out.println(java.toString());
-//                    getLogger().lifecycle("Could not find id for {}", signature);
-//                    getLogger().lifecycle(java.toString());
+                // Ignore constructors with no parameters
+                if (!signature.split(" ", 2)[1].equals("()V")) {
+                    getLogger().lifecycle("Could not find id for {}", signature);
+                    getLogger().lifecycle(java.toString());
+                }
             } else {
                 constructorMap.remove(signature);
                 int id = idinteger;
 
-                int paramIdx = paramOffset + 1;
+                int paramIdx = implicitParamOffset;
 
                 for (int i = 0; i < constructor.getParameters().size(); i++) {
                     Parameter param = constructor.getParameter(i);
@@ -286,7 +202,6 @@ public abstract class SourceRemapTask extends DefaultTask {
                 }
             }
         });
-
 
         // Traverse all methods in the file
         cu.findAll(MethodDeclaration.class).forEach(method -> {
@@ -316,16 +231,10 @@ public abstract class SourceRemapTask extends DefaultTask {
                 }
             }
         });
-
-//        // Write the modified code back to the file
-//        StringReader reader = new StringReader(LexicalPreservingPrinter.print(cu));
-//        StringWriter writer = new StringWriter();
-//        formatter.format(reader, writer);
-//        Files.write(java, writer.toString().getBytes());
          Files.write(java, LexicalPreservingPrinter.print(cu).getBytes());
     }
 
-    private static String generateBytecodeSignature(ConstructorDeclaration constructor, TypeSolver typeSolver) {
+    private String generateBytecodeSignature(ConstructorDeclaration constructor, TypeSolver typeSolver) {
         // Get the declaring class name
         String className = constructor.resolve().declaringType().getClassName();
         String qualifiedClassName = constructor.resolve().declaringType().getQualifiedName();
@@ -349,7 +258,7 @@ public abstract class SourceRemapTask extends DefaultTask {
                 String outerClassType = constructor.resolve().declaringType().asReferenceType().getQualifiedName();
                 outerClassType = outerClassType.substring(0, outerClassType.lastIndexOf('.'));
                 parameterTypes.add("L" + outerClassType.replace('.', '/') + "$1;");
-                paramOffset++;
+                implicitParamOffset++;
             }
 
             // Add the implicit outer class reference as the first parameter for inner classes
@@ -357,7 +266,7 @@ public abstract class SourceRemapTask extends DefaultTask {
                 String outerClassType = constructor.resolve().declaringType().asReferenceType().getQualifiedName();
                 outerClassType = outerClassType.substring(0, outerClassType.lastIndexOf('.')); // Get the outer class
                 parameterTypes.add("L" + outerClassType.replace('.', '/') + ";");
-                paramOffset++;
+                implicitParamOffset++;
             }
         }
 
@@ -368,13 +277,12 @@ public abstract class SourceRemapTask extends DefaultTask {
 
         if (parentEnumClass.isPresent()) {
             parameterTypes.add("Ljava/lang/String;I");
-            paramOffset += 2;
+            implicitParamOffset += 2;
         }
 
         // Add the explicit parameters
         parameterTypes.addAll(constructor.getParameters().stream()
                 .map(p -> {
-                    Type type = p.getType();
                     ResolvedType resolvedType = JavaParserFacade.get(typeSolver).getType(p);
                     return (p.isVarArgs() ? '[' : "") + getBytecodeTypeName(resolvedType);
                 })
@@ -414,18 +322,17 @@ public abstract class SourceRemapTask extends DefaultTask {
     }
 
     private static String getPrimitiveBytecodeDescriptor(String primitiveType) {
-        switch (primitiveType) {
-            case "int": return "I";
-            case "boolean": return "Z";
-            case "byte": return "B";
-            case "char": return "C";
-            case "short": return "S";
-            case "long": return "J";
-            case "float": return "F";
-            case "double": return "D";
-            case "void": return "V";
-            default:
-                throw new IllegalArgumentException("Unknown primitive type: " + primitiveType);
-        }
+        return switch (primitiveType) {
+            case "int" -> "I";
+            case "boolean" -> "Z";
+            case "byte" -> "B";
+            case "char" -> "C";
+            case "short" -> "S";
+            case "long" -> "J";
+            case "float" -> "F";
+            case "double" -> "D";
+            case "void" -> "V";
+            default -> throw new IllegalArgumentException("Unknown primitive type: " + primitiveType);
+        };
     }
 }

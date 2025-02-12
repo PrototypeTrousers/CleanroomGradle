@@ -18,7 +18,8 @@ public abstract class CleanUp extends MavenJarExec implements JarTransformer {
         super("cleanup", "net.minecraftforge:mcpcleanup:2.3.6:fatjar");
         this.getMainClass().set("net.minecraftforge.mcpcleanup.ConsoleTool");
         this.args("--input", getDirtyJar(),
-                "--output", getCleanJar());
+                "--output", getCleanJar(),
+                "--fix-generic-params");
         //this.setup(true);
     }
 }

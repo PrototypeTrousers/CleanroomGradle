@@ -17,7 +17,6 @@ import com.cleanroommc.gradle.api.structure.Locations;
 import com.cleanroommc.gradle.api.types.Types;
 import com.cleanroommc.gradle.api.types.json.schema.VersionMeta;
 import com.cleanroommc.gradle.env.cleanroom.task.SourceRemapTask;
-import com.cleanroommc.gradle.env.common.task.Decompile;
 import com.cleanroommc.gradle.env.common.task.RunMinecraft;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
 import com.cleanroommc.gradle.env.mcp.task.*;
@@ -385,10 +384,9 @@ public class CleanroomTasks {
             t.getSrcFolder().fileProvider(addCleanroomMinecraftSources.map(Copy::getDestinationDir));
             t.getConstructorTxt().fileProvider(mcpTasks.extractMcpConfig().map(Copy::getDestinationDir).map(f -> Locations.file(f, "config", "constructors.txt")));
             t.getParametersTxt().set(Locations.file(mcpTasks.mcpMappingFolder(), "params.csv"));
-            t.getRemappedFolder().set(this.location("rerererer"));
+            t.getRemappedFolder().set(this.location("SrgedCleanroomMinecraftSources"));
             t.getSrg().set(mcpTasks.genSrgMappings().map(GenSrgMappingsTask::getMcpToSrg).map(Provider::get).map(RegularFile::getAsFile).get());
-            t.getParamsSrg().set(mcpTasks.genSrgMappings().map(GenSrgMappingsTask::getMcpToSrgParams).map(Provider::get).map(RegularFile::getAsFile).get());
-            t.getClasspasthFiles().from(
+            t.getClasspathFiles().from(
                     this.location("build", "libs", "cleanroomminecraft", "minecraft-srg-1.12.2.jar"),
                     cleanroomConfig,
                     cleanroomNativesConfig,

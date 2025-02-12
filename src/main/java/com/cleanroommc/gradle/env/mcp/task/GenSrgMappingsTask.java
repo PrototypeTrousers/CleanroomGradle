@@ -24,9 +24,6 @@ import java.util.regex.Pattern;
 @CacheableTask
 public abstract class GenSrgMappingsTask extends DefaultTask {
 
-    Pattern PARAM_CSV_PATTERN = Pattern.compile("_(i?\\d+)_(\\d+)_");
-    Pattern FUNC_ID = Pattern.compile("_(i?\\d+)_");
-
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
     public abstract RegularFileProperty getInputSrg();
@@ -51,10 +48,6 @@ public abstract class GenSrgMappingsTask extends DefaultTask {
     @PathSensitive(PathSensitivity.NONE)
     public abstract RegularFileProperty getFieldsCsv();
 
-    @InputFile
-    @PathSensitive(PathSensitivity.NONE)
-    public abstract RegularFileProperty getParamsCsv();
-
     @OutputFile
     public abstract RegularFileProperty getNotchToSrg();
 
@@ -69,9 +62,6 @@ public abstract class GenSrgMappingsTask extends DefaultTask {
 
     @OutputFile
     public abstract RegularFileProperty getMcpToSrg();
-
-    @OutputFile
-    public abstract RegularFileProperty getMcpToSrgParams();
 
     @OutputFile
     public abstract RegularFileProperty getSrgExc();
@@ -100,18 +90,6 @@ public abstract class GenSrgMappingsTask extends DefaultTask {
             }
         }
 
-        try (CsvReader<CsvRecord> csv = CsvReader.builder().ofCsvRecord(getParamsCsv().get().getAsFile().toPath())) {
-            for (final CsvRecord csvRecord : csv) {
-                Matcher matcher = PARAM_CSV_PATTERN.matcher(csvRecord.getField(0));
-                if (matcher.find()) {
-                    String id = matcher.group(1);
-                    int paramIdx = Integer.parseInt(matcher.group(2));
-                    params.computeIfAbsent(id, k -> new HashMap<>());
-                    params.get(id).put(paramIdx, csvRecord.getField(1));
-                }
-            }
-        }
-
         SrgContainer inSrg = new SrgContainer().readSrg(getInputSrg().get().getAsFile());
         Map<String, String> excRemap = new HashMap<>(); // Was a bunch of commented out code in ForgeGradle
         // Write outputs
@@ -127,7 +105,6 @@ public abstract class GenSrgMappingsTask extends DefaultTask {
         Files.createDirectories(getNotchToMcp().get().getAsFile().toPath().getParent());
         Files.createDirectories(getSrgToMcp().get().getAsFile().toPath().getParent());
         Files.createDirectories(getMcpToSrg().get().getAsFile().toPath().getParent());
-        Files.createDirectories(getMcpToSrgParams().get().getAsFile().toPath().getParent());
         Files.createDirectories(getMcpToNotch().get().getAsFile().toPath().getParent());
 
         // create streams
@@ -136,7 +113,6 @@ public abstract class GenSrgMappingsTask extends DefaultTask {
              BufferedWriter notchToMcp = Files.newBufferedWriter(getNotchToMcp().get().getAsFile().toPath(), Charsets.UTF_8);
              BufferedWriter srgToMcp = Files.newBufferedWriter(getSrgToMcp().get().getAsFile().toPath(), Charsets.UTF_8);
              BufferedWriter mcpToSrg = Files.newBufferedWriter(getMcpToSrg().get().getAsFile().toPath(), Charsets.UTF_8);
-             BufferedWriter mcpToSrgParams = Files.newBufferedWriter(getMcpToSrgParams().get().getAsFile().toPath(), Charsets.UTF_8);
              BufferedWriter mcpToNotch = Files.newBufferedWriter(getMcpToNotch().get().getAsFile().toPath(), Charsets.UTF_8)) {
             String line, temp, mcpName;
             // packages
@@ -248,20 +224,6 @@ public abstract class GenSrgMappingsTask extends DefaultTask {
                 // output is notch
                 mcpToNotch.write(String.format("MD: %s %s", mcpName, e.getKey()));
                 mcpToNotch.newLine();
-
-                Matcher matcher = FUNC_ID.matcher(e.getValue().name);
-                if (matcher.find()) {
-                    getLogger().lifecycle("Found function id {} in {}", matcher.group(1), e.getValue().name);
-                    String funcId = matcher.group(1);
-
-                    HashMap<Integer, String> m = params.get(funcId);
-                    if (m != null) {
-                        for (Map.Entry<Integer, String> entry : m.entrySet()) {
-                            mcpToSrgParams.write(String.format("MP: %s %s %s", mcpName, entry.getValue(), "p_" + funcId + "_" + entry.getKey() + "_"));
-                            mcpToSrgParams.newLine();
-                        }
-                    }
-                }
             }
         }
     }

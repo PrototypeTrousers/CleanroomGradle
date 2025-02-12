@@ -278,13 +278,11 @@ public class MCPTasks {
             t.getInputSrg().set(srgMapping().get());
             t.getFieldsCsv().set(Locations.file(mcpMappingFolder, "fields.csv"));
             t.getMethodsCsv().set(Locations.file(mcpMappingFolder, "methods.csv"));
-            t.getParamsCsv().set(Locations.file(mcpMappingFolder, "params.csv"));
             t.getInputExc().set(Locations.file(this.location("mappings", "forge.exc")));
             t.getNotchToSrg().set(Locations.file(mcpMappingFolder, "notch-srg.srg"));
             t.getNotchToMcp().set(Locations.file(mcpMappingFolder, "notch-mcp.srg"));
             t.getSrgToMcp().set(Locations.file(mcpMappingFolder, "srg-mcp.srg"));
             t.getMcpToSrg().set(Locations.file(mcpMappingFolder, "mcp-srg.srg"));
-            t.getMcpToSrgParams().set(Locations.file(mcpMappingFolder, "mcp-srg+params.srg"));
             t.getMcpToNotch().set(Locations.file(mcpMappingFolder, "mcp-notch.srg"));
             t.getSrgExc().set(Locations.file(mcpMappingFolder, "srg.exc"));
             t.getMcpExc().set(Locations.file(mcpMappingFolder, "mcp.exc"));
