@@ -47,6 +47,7 @@ public abstract class SourceRemapTask extends DefaultTask {
 
     static Pattern FUNC_ID = Pattern.compile("_(i?\\d+)_");
     static Pattern DIAMOND = Pattern.compile("(<.+>)");
+    static Pattern PARAMID = Pattern.compile("(?<=_)i?\\d+(?=_)");
 
     @InputFile
     @PathSensitive(PathSensitivity.NONE)
@@ -60,6 +61,10 @@ public abstract class SourceRemapTask extends DefaultTask {
     @PathSensitive(PathSensitivity.NONE)
     public abstract RegularFileProperty getConstructorTxt();
 
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    public abstract RegularFileProperty getParametersTxt();
+
     @InputDirectory
     @PathSensitive(PathSensitivity.NONE)
     public abstract DirectoryProperty getSrcFolder();
@@ -71,6 +76,7 @@ public abstract class SourceRemapTask extends DefaultTask {
     public abstract ConfigurableFileCollection getClasspasthFiles();
 
     static HashMap<String, Integer> constructorMap = new HashMap<>();
+    static HashMap<String, Map<String,String>> paramMap = new HashMap<>();
     static final ASFormatter formatter = new ASFormatter();
     static int paramOffset;
 
@@ -109,6 +115,22 @@ public abstract class SourceRemapTask extends DefaultTask {
                 }
             }
         } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try (BufferedReader br = new BufferedReader(new FileReader(getParametersTxt().getAsFile().get()))) {
+                String line;
+                Matcher matcher = PARAMID.matcher("");
+                while ((line = br.readLine()) != null) {
+                    // Split the line into the number and the rest of the string
+                    String[] parts = line.split(","); // Split into 2 parts: number and the rest
+                    matcher.reset(parts[0]);
+                    if (matcher.find()) {
+                        paramMap.computeIfAbsent(matcher.group(), k -> new HashMap<>());
+                        paramMap.get(matcher.group()).put(parts[1], parts[0]);
+                    }
+                }
+            } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -168,6 +190,24 @@ public abstract class SourceRemapTask extends DefaultTask {
             e.printStackTrace();
         }
 
+        String paramFilePath = "/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/mcp_config/mappings/mcp/stable/39/params.csv"; // Replace with your file path
+
+        try (BufferedReader br = new BufferedReader(new FileReader(paramFilePath))) {
+            String line;
+            Matcher matcher = PARAMID.matcher("");
+            while ((line = br.readLine()) != null) {
+                // Split the line into the number and the rest of the string
+                String[] parts = line.split(","); // Split into 2 parts: number and the rest
+                matcher.reset(parts[0]);
+                if (matcher.find()) {
+                    paramMap.computeIfAbsent(matcher.group(), k -> new HashMap<>());
+                    paramMap.get(matcher.group()).put(parts[1], parts[0]);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         TypeSolver typeSolver = new CombinedTypeSolver(
                 new ReflectionTypeSolver(), // Resolves Java SDK classes
                 new JavaParserTypeSolver(new File("/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/")) // Resolves project classes
@@ -192,7 +232,7 @@ public abstract class SourceRemapTask extends DefaultTask {
         formatter.setUseProperInnerClassIndenting(false);
 
         try {
-            parseFile(new File("/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/net/minecraft/block/Block.java").toPath(),
+            parseFile(new File("/mnt/ldata/git/cleanroomarms/build/cg/versions/1.12.2/cleanroom/rerererer/net/minecraft/client/audio/SoundManager.java").toPath(),
                     parser, typeSolver);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -253,37 +293,26 @@ public abstract class SourceRemapTask extends DefaultTask {
             CallableDeclaration.Signature s = method.getSignature();
             Matcher m = FUNC_ID.matcher(method.getNameAsString());
             if (m.find()) {
-
-                String methodId = m.group(1);
-
-                // Rename each parameter to arg0, arg1, etc.
-                int paramIdx = 0;
-                if (!method.isStatic()) {
-                    paramIdx++;
-                }
                 for (int i = 0; i < method.getParameters().size(); i++) {
                     Parameter param = method.getParameter(i);
+                    String paramName = param.getNameAsString();
 
-                    String newName = "p_" + methodId + "_" + paramIdx + "_";
+                    Matcher n = PARAMID.matcher(method.getNameAsString());
+                    if (n.find()) {
 
-                    method.findAll(NameExpr.class).forEach(nameExpr -> {
-                        if (nameExpr.equals(param.getNameAsExpression())) {
-                            nameExpr.setName(newName);
-                        }
-                    });
-
-                    param.setName(newName); // Rename based on index
-
-                    Type paramType = param.getType();
-                    if (paramType.isPrimitiveType()) {
-                        PrimitiveType.Primitive primitiveParamtype = paramType.asPrimitiveType().getType();
-                        if (primitiveParamtype == PrimitiveType.Primitive.DOUBLE ||
-                                primitiveParamtype == PrimitiveType.Primitive.LONG) {
-                            paramIdx += 2;
-                            continue;
+                        Map<String, String> b = paramMap.get(n.group());
+                        if (b != null) {
+                            if (b.get(paramName) != null) {
+                                String newName = b.get(paramName);
+                                method.findAll(NameExpr.class).forEach(nameExpr -> {
+                                    if (nameExpr.equals(param.getNameAsExpression())) {
+                                        nameExpr.setName(newName);
+                                    }
+                                });
+                                param.setName(newName);
+                            }
                         }
                     }
-                    paramIdx++;
                 }
             }
         });

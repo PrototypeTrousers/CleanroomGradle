@@ -384,6 +384,7 @@ public class CleanroomTasks {
             t.dependsOn(mcpTasks.extractMcpMappings());
             t.getSrcFolder().fileProvider(addCleanroomMinecraftSources.map(Copy::getDestinationDir));
             t.getConstructorTxt().fileProvider(mcpTasks.extractMcpConfig().map(Copy::getDestinationDir).map(f -> Locations.file(f, "config", "constructors.txt")));
+            t.getParametersTxt().set(Locations.file(mcpTasks.mcpMappingFolder(), "params.csv"));
             t.getRemappedFolder().set(this.location("rerererer"));
             t.getSrg().set(mcpTasks.genSrgMappings().map(GenSrgMappingsTask::getMcpToSrg).map(Provider::get).map(RegularFile::getAsFile).get());
             t.getParamsSrg().set(mcpTasks.genSrgMappings().map(GenSrgMappingsTask::getMcpToSrgParams).map(Provider::get).map(RegularFile::getAsFile).get());
