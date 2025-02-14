@@ -6,7 +6,6 @@ import com.cleanroommc.gradle.api.lazy.Providers;
 import com.cleanroommc.gradle.api.named.Configurations;
 import com.cleanroommc.gradle.api.named.SourceSets;
 import com.cleanroommc.gradle.api.named.dependency.Dependencies;
-import com.cleanroommc.gradle.api.named.extension.CleanroomExtension;
 import com.cleanroommc.gradle.api.named.task.TaskGroup;
 import com.cleanroommc.gradle.api.named.task.Tasks;
 import com.cleanroommc.gradle.api.os.Platform;
@@ -320,13 +319,13 @@ public class CleanroomTasks {
             t.dependsOn(mcpTasks.cleanup());
             t.getCopyOverSource().set(true);
             t.source(mcpTasks.cleanup().flatMap(CleanUp::getCleanJar));
-            t.patch(mcpTasks.location("patches", "net.zip"));
+            t.patch(cleanroomExtension.getCleanroomPatches());
             t.modified(this.location("cleamroommcjar.jar"));
         }));
 
         var applyATtoSources = group.add(Tasks.with(project, this.taskName("applyAccessTransformerscleanroom"), ApplySourceAccessTransformersTask.class, t -> {
             t.dependsOn(patchJar2, mcpTasks.extDepsAt());
-            t.getInputJar().set(patchJar2.map(ApplyDiffs::getModifiedPath).get());
+            t.getInputJar().fileProvider(patchJar2.map(ApplyDiffs::getModifiedPath));
             t.getOutputJar().set(this.location("accessTransformedCleanroomPatched.jar"));
             t.getAccessTransformerFiles().from(cleanroomExtension.ats, mcpTasks.extDepsAt().flatMap(ExtractDependencyATsTask::getOutputFile));
         }));

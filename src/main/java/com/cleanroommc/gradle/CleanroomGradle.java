@@ -1,6 +1,6 @@
 package com.cleanroommc.gradle;
 
-import com.cleanroommc.gradle.api.named.extension.CleanroomExtension;
+import com.cleanroommc.gradle.env.cleanroom.CleanroomExtension;
 import com.cleanroommc.gradle.env.cleanroom.CleanroomTasks;
 import com.cleanroommc.gradle.env.mcp.MCPTasks;
 import com.cleanroommc.gradle.env.mixins.MixinProps;

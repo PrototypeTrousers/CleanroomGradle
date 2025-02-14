@@ -1,4 +1,4 @@
-package com.cleanroommc.gradle.api.named.extension;
+package com.cleanroommc.gradle.env.cleanroom;
 
 import com.cleanroommc.gradle.api.named.Configurations;
 import com.cleanroommc.gradle.api.named.attribute.ObfuscationAttribute;
@@ -8,6 +8,7 @@ import com.cleanroommc.gradle.env.mcp.MCPTasks;
 import com.cleanroommc.gradle.env.mcp.task.GenSrgMappingsTask;
 import com.cleanroommc.gradle.utils.Utilities;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tools.ant.types.resources.FileProvider;
 import org.gradle.api.NamedDomainObjectProvider;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -33,12 +34,15 @@ public abstract class CleanroomExtension implements ExtensionAware {
 
     public static final String EXT_NAME = "cleanroom";
     private final Project project;
+    private final MCPTasks mcpTasks;
 
     private final ConfigurableFileCollection depFilesToDeobf;
     private final SetProperty<String> depModulesToDeobf;
     public FileTree ats;
 
     private NamedDomainObjectProvider<Configuration> config;
+
+    private File customPatch;
 
     public static final Attribute<Boolean> DEOBFUSCATOR_TRANSFORMED = Attribute
             .of("rfgDeobfuscatorTransformed", Boolean.class);
@@ -58,6 +62,7 @@ public abstract class CleanroomExtension implements ExtensionAware {
     public CleanroomExtension(Project project, MCPTasks mcpTasks) {
         this.project = project;
         this.config = Configurations.of(project, EXT_NAME);
+        this.mcpTasks = mcpTasks;
 
         final ObjectFactory objects = project.getObjects();
         this.depFilesToDeobf = objects.fileCollection();
@@ -147,5 +152,17 @@ public abstract class CleanroomExtension implements ExtensionAware {
     public void at(){
         ats = project.fileTree("src/main/resources/META-INF/").filter(
                 f -> f.getName().endsWith("_at.cfg")).getAsFileTree();
+    }
+
+    public File patches(File patches) {
+        customPatch = patches;
+        return customPatch;
+    }
+
+    public Object getCleanroomPatches() {
+        if (customPatch == null) {
+            return mcpTasks.location("patches", "net.zip");
+        }
+        return customPatch;
     }
 }
